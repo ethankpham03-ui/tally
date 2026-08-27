@@ -1,0 +1,11 @@
+{
+  "asset": "og.png",
+  "generator": "OpenAI imagegen",
+  "generatedAt": "2026-08-27",
+  "dimensions": {
+    "width": 1200,
+    "height": 630
+  },
+  "prompt": "Social preview OG cho web app tài chính cá nhân Mạch. Bố cục ngang: tên Mạch và tagline Dòng tiền rõ ràng. Cuộc sống nhẹ hơn. ở bên trái; một thẻ tài chính Minimal Neumorphism ở bên phải với số dư, biểu đồ teal/coral và hàng subscription trừu tượng. Nền xám lạnh rất nhạt, ít chi tiết, tương phản rõ, không device mockup và không logo thương hiệu bên thứ ba.",
+  "notes": "Generated in one imagegen request and visually inspected before inclusion."
+}

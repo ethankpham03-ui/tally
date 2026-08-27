@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-27T15:28:56.820Z",
+  "title": "Design System: Mạch",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Current Cobalt",
+        "canonical": "#176dfa",
+        "tonalRamp": ["oklch(15% 0.22 259)", "oklch(27% 0.22 259)", "oklch(39% 0.22 259)", "oklch(51% 0.22 259)", "oklch(63% 0.22 259)", "oklch(75% 0.22 259)", "oklch(87% 0.22 259)", "oklch(95% 0.22 259)"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Pearl Ground",
+        "canonical": "#f0f1f4",
+        "tonalRamp": ["oklch(15% 0.008 260)", "oklch(27% 0.008 260)", "oklch(39% 0.008 260)", "oklch(51% 0.008 260)", "oklch(63% 0.008 260)", "oklch(75% 0.008 260)", "oklch(87% 0.008 260)", "oklch(95% 0.008 260)"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Cloud Surface",
+        "canonical": "#f8f9fb",
+        "tonalRamp": ["oklch(15% 0.005 260)", "oklch(27% 0.005 260)", "oklch(39% 0.005 260)", "oklch(51% 0.005 260)", "oklch(63% 0.005 260)", "oklch(75% 0.005 260)", "oklch(87% 0.005 260)", "oklch(95% 0.005 260)"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Graphite Ink",
+        "canonical": "#111b31",
+        "tonalRamp": ["oklch(15% 0.04 260)", "oklch(27% 0.04 260)", "oklch(39% 0.04 260)", "oklch(51% 0.04 260)", "oklch(63% 0.04 260)", "oklch(75% 0.04 260)", "oklch(87% 0.04 260)", "oklch(95% 0.04 260)"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Cool Slate",
+        "canonical": "#515a6e",
+        "tonalRamp": ["oklch(15% 0.035 260)", "oklch(27% 0.035 260)", "oklch(39% 0.035 260)", "oklch(51% 0.035 260)", "oklch(63% 0.035 260)", "oklch(75% 0.035 260)", "oklch(87% 0.035 260)", "oklch(95% 0.035 260)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {"displayName": "Financial Display", "purpose": "Balances and the most important monetary total."},
+      "display-mobile": {"displayName": "Mobile Financial Display", "purpose": "Dominant monetary values on the primary mobile surface."},
+      "headline": {"displayName": "Page Headline", "purpose": "Primary page greeting or title."},
+      "title": {"displayName": "Section Title", "purpose": "Compact card and section headings."},
+      "body": {"displayName": "Interface Body", "purpose": "Short guidance and contextual copy."},
+      "label": {"displayName": "Utility Label", "purpose": "Metadata, controls, badges, and supporting values."},
+      "field": {"displayName": "Field Value", "purpose": "Readable text and numeric entry without mobile zoom."}
+    },
+    "shadows": [
+      {"name": "raised", "value": "-8px -8px 20px rgba(255, 255, 255, 0.96), 9px 9px 24px rgba(111, 125, 147, 0.2)", "purpose": "One shallow layer for primary panels."},
+      {"name": "raised-mobile", "value": "-5px -5px 14px rgba(255, 255, 255, 0.96), 6px 6px 17px rgba(111, 125, 147, 0.2)", "purpose": "Reduced panel depth below 768px."},
+      {"name": "control", "value": "-4px -4px 10px rgba(255, 255, 255, 0.96), 5px 5px 12px rgba(111, 125, 147, 0.18)", "purpose": "Compact tactile lift for secondary and icon controls."},
+      {"name": "inset", "value": "inset 3px 3px 8px rgba(111, 125, 147, 0.18), inset -3px -3px 8px rgba(255, 255, 255, 0.9)", "purpose": "Recessed choice groups and search fields."}
+    ],
+    "motion": [
+      {"name": "press", "value": "120ms ease", "purpose": "Scale feedback for tappable controls."},
+      {"name": "state", "value": "180ms ease", "purpose": "Color, background, and shadow transitions."},
+      {"name": "enter", "value": "420ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Small opacity and vertical entrance for changed views."}
+    ],
+    "breakpoints": [
+      {"name": "compact-mobile", "value": "370px"},
+      {"name": "mobile", "value": "768px"},
+      {"name": "compact-sidebar", "value": "1180px"}
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single cobalt action used for the highest-priority operation.",
+      "html": "<button class='ds-btn-primary' type='button'>Thêm giao dịch</button>",
+      "css": ".ds-btn-primary { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; padding: 0 18px; border: 0; border-radius: var(--control-radius); color: #fff; background: var(--accent); box-shadow: 0 9px 20px color-mix(in srgb, var(--accent) 24%, transparent), inset 0 1px 0 rgba(255,255,255,0.34); font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; font-size: 13px; font-weight: 700; transition: background 180ms ease, transform 120ms ease; } .ds-btn-primary:hover { background: var(--accent-strong); } .ds-btn-primary:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 75%, white); outline-offset: 3px; } .ds-btn-primary:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Raised Card",
+      "kind": "card",
+      "refersTo": "card-raised",
+      "description": "A near-white panel with one shallow cool Neumorphic lift.",
+      "html": "<section class='ds-card'><span class='ds-card-label'>Số dư khả dụng</span><strong class='ds-card-value'>42.680.000 ₫</strong></section>",
+      "css": ".ds-card { padding: 24px; border-radius: var(--panel-radius); color: var(--ink); background: var(--surface); box-shadow: var(--shadow-raised); font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; } .ds-card-label { display: block; color: var(--muted); font-size: 13px; font-weight: 570; } .ds-card-value { display: block; margin-top: 20px; font-size: clamp(31px, 9.6vw, 40px); font-weight: 710; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "A clean solid field with a visible cobalt focus and explicit error state.",
+      "html": "<label class='ds-field'><span>Tên giao dịch</span><input type='text' placeholder='Ví dụ: Ăn trưa'></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: var(--ink); font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; font-size: 12px; font-weight: 650; } .ds-field input { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--line) 75%, transparent); border-radius: var(--control-radius); color: var(--ink); background: var(--surface-solid); font: inherit; font-size: 16px; font-weight: 400; caret-color: var(--accent); } .ds-field input:hover { border-color: color-mix(in srgb, var(--muted) 38%, transparent); } .ds-field input:focus-visible { border-color: var(--accent); outline: 3px solid color-mix(in srgb, var(--accent) 75%, white); outline-offset: 2px; } .ds-field input[aria-invalid='true'] { border-color: var(--negative); }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segment-container",
+      "description": "A recessed choice group with a cobalt selected segment.",
+      "html": "<div class='ds-segment' aria-label='Khoảng thời gian'><button type='button'>7 ngày</button><button class='ds-is-active' type='button' aria-pressed='true'>30 ngày</button><button type='button'>6 tháng</button></div>",
+      "css": ".ds-segment { display: inline-flex; align-items: center; padding: 4px; border-radius: 11px; background: var(--surface-inset); box-shadow: var(--shadow-inset); font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; } .ds-segment button { min-height: 34px; padding: 0 13px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 650; transition: color 180ms ease, background 180ms ease, transform 120ms ease; } .ds-segment button:hover { color: var(--ink); } .ds-segment button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 75%, white); outline-offset: 2px; } .ds-segment button:active { transform: scale(0.98); } .ds-segment button.ds-is-active { color: #fff; background: var(--accent); box-shadow: 0 5px 12px color-mix(in srgb, var(--accent) 25%, transparent); }"
+    },
+    {
+      "name": "Navigation Item",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "A calm destination with a solid cobalt active state.",
+      "html": "<nav class='ds-nav' aria-label='Điều hướng mẫu'><button class='ds-nav-item ds-is-active' type='button' aria-current='page'>Tổng quan</button><button class='ds-nav-item' type='button'>Giao dịch</button></nav>",
+      "css": ".ds-nav { display: grid; gap: 9px; font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; } .ds-nav-item { min-height: 52px; display: flex; align-items: center; padding: 0 15px; border: 0; border-radius: var(--control-radius); color: var(--muted); background: transparent; font: inherit; font-size: 14px; font-weight: 620; text-align: left; transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 120ms ease; } .ds-nav-item:hover { color: var(--ink); background: color-mix(in srgb, var(--surface) 72%, transparent); } .ds-nav-item:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 75%, white); outline-offset: 3px; } .ds-nav-item:active { transform: scale(0.98); } .ds-nav-item.ds-is-active { color: #fff; background: var(--accent); box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 26%, transparent), inset 0 1px 0 rgba(255,255,255,0.35); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Current",
+    "overview": "Mạch feels like a calm current: a pearl-grey field, shallow cool highlight-and-shadow pairs, graphite type, and rare cobalt action. Minimalism controls density; Neumorphism supplies material feedback only where touch and hierarchy benefit from it. The system favors immediate financial legibility, quiet rows, explicit states, and generous breathing room.",
+    "keyCharacteristics": [
+      "Pearl-grey ground with near-white material surfaces.",
+      "One cobalt action family with restrained semantic color.",
+      "Shallow cool depth, never more than one raised layer.",
+      "Graphite Geist typography with tabular financial numerals.",
+      "Quiet divider-led rows and at least 44px mobile targets.",
+      "Surface corners at 16–20px; controls at 12px."
+    ],
+    "rules": [
+      {"name": "The One Current Rule", "body": "Cobalt marks primary action, selection, active navigation, and focus; do not introduce a second brand accent.", "section": "colors"},
+      {"name": "The Numerals Lead Rule", "body": "Financial values use tabular numerals and tighter tracking; labels remain compact and visually subordinate.", "section": "typography"},
+      {"name": "The Mobile Density Rule", "body": "Mobile establishes the default touch size and reading order; larger screens add space, not smaller controls.", "section": "layout"},
+      {"name": "The One-Layer Rule", "body": "A raised surface may contain flat or inset children, never another raised panel.", "section": "elevation"},
+      {"name": "The Meaning Before Material Rule", "body": "State must remain clear through text, color, or focus treatment when shadows are removed.", "section": "elevation"}
+    ],
+    "dos": [
+      "Do keep the page ground pearl-grey and place primary content on near-white surfaces.",
+      "Do reserve cobalt for the primary action, active destination, selected segment, focus, and sparse emphasis.",
+      "Do use tabular numerals for balances, amounts, dates, and percentages.",
+      "Do keep mobile tap targets at least 44px and preserve the 320px no-horizontal-scroll floor.",
+      "Do pair positive, negative, and warning color with explicit copy or labels."
+    ],
+    "donts": [
+      "Don't recreate detail-heavy Neumorphism, deep embossing, or more than one raised layer.",
+      "Don't use shadow alone to communicate selection, status, validation, or interactivity.",
+      "Don't add gradients or a competing brand accent to make the interface feel more premium.",
+      "Don't compress rows or controls to fit more finance data into the first view.",
+      "Don't promote page-specific charts, renewal geometry, or dashboard column arrangements into global component rules."
+    ]
+  }
+}
