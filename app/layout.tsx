@@ -13,25 +13,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Mạch | Quản lý tài chính cá nhân',
-  description: 'Theo dõi thu chi, ngân sách và các gói đăng ký định kỳ trong cùng một nơi.',
+  applicationName: 'Flux',
+  title: 'Flux | Personal finance, clearly',
+  description: 'Track cash flow, budgets, and recurring subscriptions in one clear place.',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [{ url: '/flux-icon.png', type: 'image/png' }],
+    shortcut: [{ url: '/flux-icon.png', type: 'image/png' }],
+    apple: [{ url: '/flux-icon.png', type: 'image/png' }],
+  },
   openGraph: {
-    title: 'Mạch | Dòng tiền rõ ràng',
-    description: 'Theo dõi thu chi, ngân sách và các gói đăng ký định kỳ trong cùng một nơi.',
-    locale: 'vi_VN',
+    title: 'Flux | Clear cash flow',
+    description: 'Track cash flow, budgets, and recurring subscriptions in one clear place.',
+    locale: 'en_US',
+    alternateLocale: ['vi_VN'],
     type: 'website',
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Mạch — Dòng tiền rõ ràng. Cuộc sống nhẹ hơn.' }],
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Flux personal finance dashboard' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Mạch | Dòng tiền rõ ràng',
-    description: 'Theo dõi thu chi, ngân sách và các gói đăng ký định kỳ trong cùng một nơi.',
+    title: 'Flux | Clear cash flow',
+    description: 'Track cash flow, budgets, and recurring subscriptions in one clear place.',
     images: ['/og.png'],
   },
 };
 
 const directionContract = `<!--
-THESIS: Mạch makes the next charge as visible as the current balance. It refuses the dense finance cockpit.
+THESIS: Flux makes the next charge as visible as the current balance. It refuses the dense finance cockpit.
 OWN-WORLD: Pearl-grey ground, shallow cool Neumorphic depth, graphite type, cobalt action, 16-20px corners, quiet rows.
 STORY: See what remains, record what changed, then inspect what renews next.
 FIRST VIEWPORT: Mobile opens with a compact app bar, balance, two summaries, nearest renewal, and one calm chart. Desktop expands into a left overview and right subscription column.
@@ -41,7 +49,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="vi">
+    <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <div className="direction-contract" aria-hidden="true" dangerouslySetInnerHTML={{ __html: directionContract }} />
         {children}

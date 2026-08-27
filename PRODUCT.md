@@ -33,19 +33,22 @@ Kết nối quản lý thu chi với quản lý subscription: một kỳ gia h�
 - Ngân sách theo danh mục.
 - Quản lý gói đăng ký, ngày gia hạn, chu kỳ, trạng thái và chi phí quy đổi theo tháng.
 - Cảnh báo khoản sắp gia hạn và tự liên kết phí định kỳ với giao dịch là hướng chức năng cốt lõi.
+- Hỗ trợ đầy đủ tiếng Anh và tiếng Việt; tiếng Anh là ngôn ngữ mặc định.
 - Giao diện responsive cho desktop và mobile web.
 - Mobile web là bề mặt sử dụng chính: luồng xem số dư, thêm giao dịch và kiểm tra kỳ gia hạn phải tối ưu cho chiều rộng 360-430px và thao tác một tay.
 
 ## Brand Commitments
 
 - Tên folder `BudgetApp` không phải tên sản phẩm.
-- Tên sản phẩm đã được chốt là `Mạch`.
+- Tên sản phẩm đã được chốt là `Flux`: một tên tiếng Anh gồm một từ và không được dịch theo locale.
+- Tài sản biểu tượng chuẩn là `public/flux-icon.png` (URL `/flux-icon.png`); cùng một biểu tượng phải xuất hiện nhất quán trong app shell, metadata và các bề mặt cài đặt ứng dụng.
+- Flux hỗ trợ tiếng Anh và tiếng Việt. Tiếng Anh là mặc định; chuyển sang tiếng Việt phải thay toàn bộ copy giao diện liên quan thay vì trộn hai ngôn ngữ trên cùng một bề mặt.
 - Hướng hình ảnh đã chốt: Minimal Neumorphism Premium UI. Minimalism kiểm soát bố cục và mật độ; Neumorphism chỉ tạo chất liệu và phản hồi cho các thành phần tương tác quan trọng.
 - Giao diện phải có cảm giác hiện đại, vật lý và cao cấp nhưng vẫn ưu tiên khoảng thở, khả năng đọc dữ liệu tài chính và không gây mỏi mắt.
 
 ## Evidence on Hand
 
-- Chưa có logo, dữ liệu người dùng, testimonial, benchmark hoặc tài sản thương hiệu thật.
+- Đã có biểu tượng thương hiệu chuẩn tại `public/flux-icon.png`; chưa có dữ liệu người dùng, testimonial hoặc benchmark thật.
 - Mọi số liệu xuất hiện trong bản demo phải được nhận diện là dữ liệu minh họa, không được trình bày như tuyên bố thương mại.
 
 ## Product Principles
@@ -53,5 +56,5 @@ Kết nối quản lý thu chi với quản lý subscription: một kỳ gia h�
 1. Một lượt xem phải trả lời được: còn bao nhiêu, đã chi bao nhiêu và sắp bị trừ khoản nào.
 2. Subscription là một phần của dòng tiền, không phải một danh sách tách rời.
 3. Chiều sâu thị giác không được làm mờ trạng thái, số tiền hoặc hành động chính.
-4. Dữ liệu demo phải có ngữ cảnh Việt Nam và đủ thực tế để recruiter tự khám phá sản phẩm.
+4. Dữ liệu demo giữ ngữ cảnh Việt Nam; giao diện mặc định bằng tiếng Anh và có bản dịch tiếng Việt đầy đủ để recruiter tự khám phá sản phẩm ở cả hai locale.
 5. Tính năng portfolio phải hoạt động và có trạng thái thật, không chỉ là màn hình tĩnh.

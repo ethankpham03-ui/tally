@@ -1,8 +1,18 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-08-27T15:28:56.820Z",
-  "title": "Design System: Mạch",
+  "title": "Design System: Flux",
   "extensions": {
+    "brand": {
+      "name": "Flux",
+      "icon": "/flux-icon.png",
+      "assetPath": "public/flux-icon.png",
+      "localizedName": false,
+      "locales": {
+        "default": "en",
+        "supported": ["en", "vi"]
+      }
+    },
     "colorMeta": {
       "accent": {
         "role": "primary",
@@ -67,7 +77,7 @@
       "kind": "button",
       "refersTo": "button-primary",
       "description": "The single cobalt action used for the highest-priority operation.",
-      "html": "<button class='ds-btn-primary' type='button'>Thêm giao dịch</button>",
+      "html": "<button class='ds-btn-primary' type='button'>Add transaction</button>",
       "css": ".ds-btn-primary { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; padding: 0 18px; border: 0; border-radius: var(--control-radius); color: #fff; background: var(--accent); box-shadow: 0 9px 20px color-mix(in srgb, var(--accent) 24%, transparent), inset 0 1px 0 rgba(255,255,255,0.34); font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; font-size: 13px; font-weight: 700; transition: background 180ms ease, transform 120ms ease; } .ds-btn-primary:hover { background: var(--accent-strong); } .ds-btn-primary:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 75%, white); outline-offset: 3px; } .ds-btn-primary:active { transform: scale(0.98); }"
     },
     {
@@ -75,7 +85,7 @@
       "kind": "card",
       "refersTo": "card-raised",
       "description": "A near-white panel with one shallow cool Neumorphic lift.",
-      "html": "<section class='ds-card'><span class='ds-card-label'>Số dư khả dụng</span><strong class='ds-card-value'>42.680.000 ₫</strong></section>",
+      "html": "<section class='ds-card'><span class='ds-card-label'>Available balance</span><strong class='ds-card-value'>42.680.000 ₫</strong></section>",
       "css": ".ds-card { padding: 24px; border-radius: var(--panel-radius); color: var(--ink); background: var(--surface); box-shadow: var(--shadow-raised); font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; } .ds-card-label { display: block; color: var(--muted); font-size: 13px; font-weight: 570; } .ds-card-value { display: block; margin-top: 20px; font-size: clamp(31px, 9.6vw, 40px); font-weight: 710; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }"
     },
     {
@@ -83,7 +93,7 @@
       "kind": "input",
       "refersTo": "input-field",
       "description": "A clean solid field with a visible cobalt focus and explicit error state.",
-      "html": "<label class='ds-field'><span>Tên giao dịch</span><input type='text' placeholder='Ví dụ: Ăn trưa'></label>",
+      "html": "<label class='ds-field'><span>Transaction name</span><input type='text' placeholder='e.g. Lunch'></label>",
       "css": ".ds-field { display: grid; gap: 8px; color: var(--ink); font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; font-size: 12px; font-weight: 650; } .ds-field input { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--line) 75%, transparent); border-radius: var(--control-radius); color: var(--ink); background: var(--surface-solid); font: inherit; font-size: 16px; font-weight: 400; caret-color: var(--accent); } .ds-field input:hover { border-color: color-mix(in srgb, var(--muted) 38%, transparent); } .ds-field input:focus-visible { border-color: var(--accent); outline: 3px solid color-mix(in srgb, var(--accent) 75%, white); outline-offset: 2px; } .ds-field input[aria-invalid='true'] { border-color: var(--negative); }"
     },
     {
@@ -91,7 +101,7 @@
       "kind": "chip",
       "refersTo": "segment-container",
       "description": "A recessed choice group with a cobalt selected segment.",
-      "html": "<div class='ds-segment' aria-label='Khoảng thời gian'><button type='button'>7 ngày</button><button class='ds-is-active' type='button' aria-pressed='true'>30 ngày</button><button type='button'>6 tháng</button></div>",
+      "html": "<div class='ds-segment' aria-label='Time range'><button type='button'>7 days</button><button class='ds-is-active' type='button' aria-pressed='true'>30 days</button><button type='button'>6 months</button></div>",
       "css": ".ds-segment { display: inline-flex; align-items: center; padding: 4px; border-radius: 11px; background: var(--surface-inset); box-shadow: var(--shadow-inset); font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; } .ds-segment button { min-height: 34px; padding: 0 13px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 650; transition: color 180ms ease, background 180ms ease, transform 120ms ease; } .ds-segment button:hover { color: var(--ink); } .ds-segment button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 75%, white); outline-offset: 2px; } .ds-segment button:active { transform: scale(0.98); } .ds-segment button.ds-is-active { color: #fff; background: var(--accent); box-shadow: 0 5px 12px color-mix(in srgb, var(--accent) 25%, transparent); }"
     },
     {
@@ -99,20 +109,22 @@
       "kind": "nav",
       "refersTo": "nav-item",
       "description": "A calm destination with a solid cobalt active state.",
-      "html": "<nav class='ds-nav' aria-label='Điều hướng mẫu'><button class='ds-nav-item ds-is-active' type='button' aria-current='page'>Tổng quan</button><button class='ds-nav-item' type='button'>Giao dịch</button></nav>",
+      "html": "<nav class='ds-nav' aria-label='Sample navigation'><button class='ds-nav-item ds-is-active' type='button' aria-current='page'>Overview</button><button class='ds-nav-item' type='button'>Transactions</button></nav>",
       "css": ".ds-nav { display: grid; gap: 9px; font-family: var(--font-geist-sans), 'Helvetica Neue', sans-serif; } .ds-nav-item { min-height: 52px; display: flex; align-items: center; padding: 0 15px; border: 0; border-radius: var(--control-radius); color: var(--muted); background: transparent; font: inherit; font-size: 14px; font-weight: 620; text-align: left; transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 120ms ease; } .ds-nav-item:hover { color: var(--ink); background: color-mix(in srgb, var(--surface) 72%, transparent); } .ds-nav-item:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 75%, white); outline-offset: 3px; } .ds-nav-item:active { transform: scale(0.98); } .ds-nav-item.ds-is-active { color: #fff; background: var(--accent); box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 26%, transparent), inset 0 1px 0 rgba(255,255,255,0.35); }"
     }
   ],
   "narrative": {
     "northStar": "The Quiet Current",
-    "overview": "Mạch feels like a calm current: a pearl-grey field, shallow cool highlight-and-shadow pairs, graphite type, and rare cobalt action. Minimalism controls density; Neumorphism supplies material feedback only where touch and hierarchy benefit from it. The system favors immediate financial legibility, quiet rows, explicit states, and generous breathing room.",
+    "overview": "Flux feels like a calm current: a pearl-grey field, shallow cool highlight-and-shadow pairs, graphite type, and rare cobalt action. Minimalism controls density; Neumorphism supplies material feedback only where touch and hierarchy benefit from it. The system favors immediate financial legibility, quiet rows, explicit states, and generous breathing room.",
     "keyCharacteristics": [
       "Pearl-grey ground with near-white material surfaces.",
       "One cobalt action family with restrained semantic color.",
       "Shallow cool depth, never more than one raised layer.",
       "Graphite Geist typography with tabular financial numerals.",
       "Quiet divider-led rows and at least 44px mobile targets.",
-      "Surface corners at 16–20px; controls at 12px."
+      "Surface corners at 16–20px; controls at 12px.",
+      "One canonical Flux wave mark from public/flux-icon.png.",
+      "Complete English and Vietnamese interfaces, with English as the default."
     ],
     "rules": [
       {"name": "The One Current Rule", "body": "Cobalt marks primary action, selection, active navigation, and focus; do not introduce a second brand accent.", "section": "colors"},
@@ -126,14 +138,18 @@
       "Do reserve cobalt for the primary action, active destination, selected segment, focus, and sparse emphasis.",
       "Do use tabular numerals for balances, amounts, dates, and percentages.",
       "Do keep mobile tap targets at least 44px and preserve the 320px no-horizontal-scroll floor.",
-      "Do pair positive, negative, and warning color with explicit copy or labels."
+      "Do pair positive, negative, and warning color with explicit copy or labels.",
+      "Do use the canonical Flux icon without redrawing, recoloring, or adding a competing shadow treatment.",
+      "Do treat English and Vietnamese as complete, equivalent interface states; English is the initial state."
     ],
     "donts": [
       "Don't recreate detail-heavy Neumorphism, deep embossing, or more than one raised layer.",
       "Don't use shadow alone to communicate selection, status, validation, or interactivity.",
       "Don't add gradients or a competing brand accent to make the interface feel more premium.",
       "Don't compress rows or controls to fit more finance data into the first view.",
-      "Don't promote page-specific charts, renewal geometry, or dashboard column arrangements into global component rules."
+      "Don't promote page-specific charts, renewal geometry, or dashboard column arrangements into global component rules.",
+      "Don't reuse the former product name or the retired bar/tile marks on any active surface.",
+      "Don't mix English and Vietnamese copy in the same locale state."
     ]
   }
 }
