@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-08-27T15:28:56.820Z",
-  "title": "Design System: Flux",
+  "title": "Design System: Tally",
   "extensions": {
     "brand": {
-      "name": "Flux",
-      "icon": "/flux-icon.png",
-      "assetPath": "public/flux-icon.png",
+      "name": "Tally",
+      "icon": "/tally-icon.png",
+      "assetPath": "public/tally-icon.png",
       "localizedName": false,
       "locales": {
         "default": "en",
@@ -115,7 +115,7 @@
   ],
   "narrative": {
     "northStar": "The Quiet Current",
-    "overview": "Flux feels like a calm current: a pearl-grey field, shallow cool highlight-and-shadow pairs, graphite type, and rare cobalt action. Minimalism controls density; Neumorphism supplies material feedback only where touch and hierarchy benefit from it. The system favors immediate financial legibility, quiet rows, explicit states, and generous breathing room.",
+    "overview": "Tally feels like a calm current: a pearl-grey field, shallow cool highlight-and-shadow pairs, graphite type, and rare cobalt action. Minimalism controls density; Neumorphism supplies material feedback only where touch and hierarchy benefit from it. The system favors immediate financial legibility, quiet rows, explicit states, and generous breathing room.",
     "keyCharacteristics": [
       "Pearl-grey ground with near-white material surfaces.",
       "One cobalt action family with restrained semantic color.",
@@ -123,7 +123,7 @@
       "Graphite Geist typography with tabular financial numerals.",
       "Quiet divider-led rows and at least 44px mobile targets.",
       "Surface corners at 16–20px; controls at 12px.",
-      "One canonical Flux wave mark from public/flux-icon.png.",
+      "One canonical Tally wave mark from public/tally-icon.png.",
       "Complete English and Vietnamese interfaces, with English as the default."
     ],
     "rules": [
@@ -139,7 +139,7 @@
       "Do use tabular numerals for balances, amounts, dates, and percentages.",
       "Do keep mobile tap targets at least 44px and preserve the 320px no-horizontal-scroll floor.",
       "Do pair positive, negative, and warning color with explicit copy or labels.",
-      "Do use the canonical Flux icon without redrawing, recoloring, or adding a competing shadow treatment.",
+      "Do use the canonical Tally icon without redrawing, recoloring, or adding a competing shadow treatment.",
       "Do treat English and Vietnamese as complete, equivalent interface states; English is the initial state."
     ],
     "donts": [

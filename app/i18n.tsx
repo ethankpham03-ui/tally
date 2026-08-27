@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
-export const APP_NAME = 'Flux' as const;
+export const APP_NAME = 'Tally' as const;
 export const DEFAULT_LOCALE = 'en' as const;
 export const SUPPORTED_LOCALES = ['en', 'vi'] as const;
 

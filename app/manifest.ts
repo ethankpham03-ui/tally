@@ -3,8 +3,8 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Flux',
-    short_name: 'Flux',
+    name: 'Tally',
+    short_name: 'Tally',
     description: 'Track cash flow, budgets, and recurring subscriptions in one clear place.',
     start_url: '/',
     scope: '/',
@@ -16,7 +16,7 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['finance', 'productivity'],
     icons: [
       {
-        src: '/flux-icon.png',
+        src: '/tally-icon.png',
         sizes: '1254x1254',
         type: 'image/png',
         purpose: 'any',

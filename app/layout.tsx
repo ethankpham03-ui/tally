@@ -13,33 +13,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  applicationName: 'Flux',
-  title: 'Flux | Personal finance, clearly',
+  applicationName: 'Tally',
+  title: 'Tally | Personal finance, clearly',
   description: 'Track cash flow, budgets, and recurring subscriptions in one clear place.',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: [{ url: '/flux-icon.png', type: 'image/png' }],
-    shortcut: [{ url: '/flux-icon.png', type: 'image/png' }],
-    apple: [{ url: '/flux-icon.png', type: 'image/png' }],
+    icon: [{ url: '/tally-icon.png', type: 'image/png' }],
+    shortcut: [{ url: '/tally-icon.png', type: 'image/png' }],
+    apple: [{ url: '/tally-icon.png', type: 'image/png' }],
   },
   openGraph: {
-    title: 'Flux | Clear cash flow',
+    title: 'Tally | Clear cash flow',
     description: 'Track cash flow, budgets, and recurring subscriptions in one clear place.',
     locale: 'en_US',
     alternateLocale: ['vi_VN'],
     type: 'website',
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Flux personal finance dashboard' }],
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Tally personal finance dashboard' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Flux | Clear cash flow',
+    title: 'Tally | Clear cash flow',
     description: 'Track cash flow, budgets, and recurring subscriptions in one clear place.',
     images: ['/og.png'],
   },
 };
 
 const directionContract = `<!--
-THESIS: Flux makes the next charge as visible as the current balance. It refuses the dense finance cockpit.
+THESIS: Tally makes the next charge as visible as the current balance. It refuses the dense finance cockpit.
 OWN-WORLD: Pearl-grey ground, shallow cool Neumorphic depth, graphite type, cobalt action, 16-20px corners, quiet rows.
 STORY: See what remains, record what changed, then inspect what renews next.
 FIRST VIEWPORT: Mobile opens with a compact app bar, balance, two summaries, nearest renewal, and one calm chart. Desktop expands into a left overview and right subscription column.

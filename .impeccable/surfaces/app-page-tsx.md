@@ -5,7 +5,7 @@ primary_target: "app/page.tsx"
 related_targets: ["app/layout.tsx","app/globals.css","app/manifest.ts"]
 ---
 
-# Flux app shell
+# Tally app shell
 
 ## Scope and mode
 
@@ -23,7 +23,7 @@ An individual checks available balance, records a transaction, and sees which pa
 - Direction: Minimal Neumorphism Premium UI, interpreted as 70% quiet composition and 30% tactile material.
 - Approved comp: `.impeccable/mocks/dashboard-minimal-neumorphism.png`
 - Approval: explicit user approval on 2026-08-27.
-- Brand note: the approved comp predates the Flux identity; it remains composition evidence, not authority for the product name or mark.
+- Brand note: the approved comp predates the Tally identity; it remains composition evidence, not authority for the product name or mark.
 - Memorable moment: the calm renewal arc connects three upcoming charges to the monthly subscription total without turning the dashboard into a mechanical cockpit.
 
 ## Responsive composition
@@ -41,7 +41,7 @@ An individual checks available balance, records a transaction, and sees which pa
 | Primary ink | cool graphite `#111B31` | CSS token |
 | Secondary ink | sampled cool grey `#515A6E` | CSS token |
 | Accent | sampled cobalt range `#166DFA` to `#2C76F4` | CSS token; one accent family only |
-| Brand mark | canonical Flux wave icon at `public/flux-icon.png` | one locked raster asset across app and platform metadata |
+| Brand mark | canonical Tally wave icon at `public/tally-icon.png` | one locked raster asset across app and platform metadata |
 | Language | English default; complete Vietnamese alternate | one locale state at a time; never mixed inline |
 | Elevation | shallow cool-grey shadow plus top-left white highlight | CSS shadow tokens; never nested more than one level |
 | Inset state | one subtle inner shadow for selected segments and the renewal arc | CSS inset shadow |
@@ -61,5 +61,5 @@ An individual checks available balance, records a transaction, and sees which pa
 - Demo data is explicitly labeled; no commercial claims or real-user evidence is fabricated.
 - The first release uses in-memory demo state. Authentication and durable cloud persistence remain open product decisions.
 - Neumorphic depth may not carry meaning by itself; text, icons and focus outlines must remain legible in bright mobile conditions.
-- `Flux` is the confirmed product name and is never localized.
+- `Tally` is the confirmed product name and is never localized.
 - English (`en`) is the default interface; Vietnamese (`vi`) must provide complete copy and equivalent accessible names without changing the information architecture.

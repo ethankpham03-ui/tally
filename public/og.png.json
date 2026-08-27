@@ -6,6 +6,6 @@
     "width": 1200,
     "height": 630
   },
-  "prompt": "1200x630 social preview for Flux. Premium 70% minimalist, 30% soft neumorphism; pale cool-gray field, navy Flux wordmark and the line Clearer cash flow. Lighter living. on the left; abstract teal flow wave and a raised finance card with cash-flow bars and subscription rows on the right. Generous negative space, no device mockup, no third-party brands, no extra UI text.",
-  "notes": "Generated in one imagegen request outside the Site checkout, visually inspected, then included as the canonical Flux social preview."
+  "prompt": "1200x630 social preview for Tally. Premium 70% minimalist, 30% soft neumorphism; pale cool-gray field, navy Tally wordmark and the line Clearer cash flow. Lighter living. on the left; abstract teal flow wave and a raised finance card with cash-flow bars and subscription rows on the right. Generous negative space, no device mockup, no third-party brands, no extra UI text.",
+  "notes": "Edited from the prior approved composition in one imagegen request outside the Site checkout; only the product name changed to Tally, then the result was visually inspected before inclusion."
 }

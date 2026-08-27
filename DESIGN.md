@@ -1,5 +1,5 @@
 ---
-name: Flux
+name: Tally
 description: "A calm tactile finance system that keeps balances and upcoming charges immediately legible."
 colors:
   accent: "#176dfa"
@@ -118,13 +118,13 @@ components:
     textColor: "#ffffff"
 ---
 
-# Design System: Flux
+# Design System: Tally
 
 ## Overview
 
 **Creative North Star: "The Quiet Current"**
 
-Flux feels like a calm current: a pearl-grey field, shallow cool highlight-and-shadow pairs, graphite type, and rare cobalt action. Minimalism controls density; Neumorphism supplies material feedback only where touch and hierarchy benefit from it.
+Tally feels like a calm current: a pearl-grey field, shallow cool highlight-and-shadow pairs, graphite type, and rare cobalt action. Minimalism controls density; Neumorphism supplies material feedback only where touch and hierarchy benefit from it.
 
 The system favors immediate financial legibility, quiet rows, explicit states, and generous breathing room. It rejects both the dense finance cockpit and detail-heavy Neumorphism that causes eye strain; depth never carries meaning by itself. Mobile web sets the default density and touch behavior, while wider layouts add working room without shrinking controls.
 
@@ -136,13 +136,13 @@ The system favors immediate financial legibility, quiet rows, explicit states, a
 - Graphite Geist typography with tabular financial numerals.
 - Quiet divider-led rows and at least 44px mobile targets.
 - Surface corners at 16–20px; controls at 12px.
-- One canonical Flux wave mark from `public/flux-icon.png`.
+- One canonical Tally wave mark from `public/tally-icon.png`.
 - Complete English and Vietnamese interfaces, with English as the default.
 
 ## Brand & Language
 
-- **Name:** Flux is the fixed one-word English product name. Do not translate or transliterate it.
-- **Canonical icon:** Use `public/flux-icon.png` (served as `/flux-icon.png`) unchanged in the app shell, browser metadata, install surfaces, and future branded imagery.
+- **Name:** Tally is the fixed one-word English product name. Do not translate or transliterate it.
+- **Canonical icon:** Use `public/tally-icon.png` (served as `/tally-icon.png`) unchanged in the app shell, browser metadata, install surfaces, and future branded imagery.
 - **Icon color:** The icon's baked-in teal wave is a locked brand signature. Cobalt remains the interaction accent; do not sample extra interface colors from the icon.
 - **Language model:** English (`en`) is the default locale and Vietnamese (`vi`) is a complete alternate locale. A language switch changes the full interface instead of showing both languages together.
 - **Locale behavior:** Keep information hierarchy, control dimensions, and meaning stable across locales; update document language, accessible names, date labels, and copy as one coherent locale state.
@@ -264,7 +264,7 @@ Financial rows remain flat inside their parent surface, separated by a single ha
 - **Do** use tabular numerals for balances, amounts, dates, and percentages.
 - **Do** keep mobile tap targets at least 44px and preserve the 320px no-horizontal-scroll floor.
 - **Do** pair positive, negative, and warning color with explicit copy or labels.
-- **Do** use the canonical Flux icon without redrawing, recoloring, or adding a competing shadow treatment.
+- **Do** use the canonical Tally icon without redrawing, recoloring, or adding a competing shadow treatment.
 - **Do** treat English and Vietnamese as complete, equivalent interface states; English is the initial state.
 
 ### Don't:

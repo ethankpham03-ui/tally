@@ -204,7 +204,7 @@ function AppContent() {
     <main className="app-frame">
       <aside className="desktop-sidebar" aria-label={c.nav.mainAria}>
         <button className="brand" type="button" onClick={() => navigate('overview')} aria-label={t('nav.homeAria', { appName: APP_NAME })}>
-          <span className="brand-mark" aria-hidden="true"><Image src="/flux-icon.png" alt="" width={48} height={48} priority /></span><span>{APP_NAME}</span>
+          <span className="brand-mark" aria-hidden="true"><Image src="/tally-icon.png" alt="" width={48} height={48} priority /></span><span>{APP_NAME}</span>
         </button>
         <nav className="desktop-nav">
           {navItems.map((item) => { const Icon = item.icon; return <button className={`nav-button ${view === item.id ? 'is-active' : ''}`} key={item.id} type="button" onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><Icon size={21} weight={view === item.id ? 'fill' : 'bold'} aria-hidden="true" /><span>{c.nav[item.id]}</span></button>; })}
@@ -218,7 +218,7 @@ function AppContent() {
       <section className="workspace">
         <header className="mobile-appbar">
           <button className="mobile-brand" type="button" onClick={() => navigate('overview')} aria-label={t('nav.homeAria', { appName: APP_NAME })}>
-            <span className="brand-mark small" aria-hidden="true"><Image src="/flux-icon.png" alt="" width={42} height={42} priority /></span><span>{APP_NAME}</span>
+            <span className="brand-mark small" aria-hidden="true"><Image src="/tally-icon.png" alt="" width={42} height={42} priority /></span><span>{APP_NAME}</span>
           </button>
           <div className="appbar-actions">
             <LanguageSwitch mobile />

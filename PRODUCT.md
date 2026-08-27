@@ -40,15 +40,15 @@ Kết nối quản lý thu chi với quản lý subscription: một kỳ gia h�
 ## Brand Commitments
 
 - Tên folder `BudgetApp` không phải tên sản phẩm.
-- Tên sản phẩm đã được chốt là `Flux`: một tên tiếng Anh gồm một từ và không được dịch theo locale.
-- Tài sản biểu tượng chuẩn là `public/flux-icon.png` (URL `/flux-icon.png`); cùng một biểu tượng phải xuất hiện nhất quán trong app shell, metadata và các bề mặt cài đặt ứng dụng.
-- Flux hỗ trợ tiếng Anh và tiếng Việt. Tiếng Anh là mặc định; chuyển sang tiếng Việt phải thay toàn bộ copy giao diện liên quan thay vì trộn hai ngôn ngữ trên cùng một bề mặt.
+- Tên sản phẩm đã được chốt là `Tally`: một tên tiếng Anh gồm một từ và không được dịch theo locale.
+- Tài sản biểu tượng chuẩn là `public/tally-icon.png` (URL `/tally-icon.png`); cùng một biểu tượng phải xuất hiện nhất quán trong app shell, metadata và các bề mặt cài đặt ứng dụng.
+- Tally hỗ trợ tiếng Anh và tiếng Việt. Tiếng Anh là mặc định; chuyển sang tiếng Việt phải thay toàn bộ copy giao diện liên quan thay vì trộn hai ngôn ngữ trên cùng một bề mặt.
 - Hướng hình ảnh đã chốt: Minimal Neumorphism Premium UI. Minimalism kiểm soát bố cục và mật độ; Neumorphism chỉ tạo chất liệu và phản hồi cho các thành phần tương tác quan trọng.
 - Giao diện phải có cảm giác hiện đại, vật lý và cao cấp nhưng vẫn ưu tiên khoảng thở, khả năng đọc dữ liệu tài chính và không gây mỏi mắt.
 
 ## Evidence on Hand
 
-- Đã có biểu tượng thương hiệu chuẩn tại `public/flux-icon.png`; chưa có dữ liệu người dùng, testimonial hoặc benchmark thật.
+- Đã có biểu tượng thương hiệu chuẩn tại `public/tally-icon.png`; chưa có dữ liệu người dùng, testimonial hoặc benchmark thật.
 - Mọi số liệu xuất hiện trong bản demo phải được nhận diện là dữ liệu minh họa, không được trình bày như tuyên bố thương mại.
 
 ## Product Principles
