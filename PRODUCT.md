@@ -43,8 +43,8 @@ Kết nối quản lý thu chi với quản lý subscription: một kỳ gia h�
 - Tên sản phẩm đã được chốt là `Tally`: một tên tiếng Anh gồm một từ và không được dịch theo locale.
 - Tài sản biểu tượng chuẩn là `public/tally-icon.png` (URL `/tally-icon.png`); cùng một biểu tượng phải xuất hiện nhất quán trong app shell, metadata và các bề mặt cài đặt ứng dụng.
 - Tally hỗ trợ tiếng Anh và tiếng Việt. Tiếng Anh là mặc định; chuyển sang tiếng Việt phải thay toàn bộ copy giao diện liên quan thay vì trộn hai ngôn ngữ trên cùng một bề mặt.
-- Hướng hình ảnh đã chốt: Minimal Neumorphism Premium UI. Minimalism kiểm soát bố cục và mật độ; Neumorphism chỉ tạo chất liệu và phản hồi cho các thành phần tương tác quan trọng.
-- Giao diện phải có cảm giác hiện đại, vật lý và cao cấp nhưng vẫn ưu tiên khoảng thở, khả năng đọc dữ liệu tài chính và không gây mỏi mắt.
+- Hướng hình ảnh đã chốt: Reference-led Premium Neumorphism UI, không áp tỷ lệ Minimalism/Neumorphism cố định. Panel chính, control, tab và subscription row dùng đường viền nổi có hướng rõ ràng để bám sát ảnh tham khảo đã duyệt.
+- Giao diện phải có cảm giác hiện đại, vật lý và cao cấp; hiệu ứng nổi luôn phục vụ thứ bậc, khoảng thở và khả năng đọc dữ liệu tài chính.
 
 ## Evidence on Hand
 

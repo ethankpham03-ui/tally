@@ -1,14 +1,14 @@
 ---
 name: Tally
-description: "A calm tactile finance system that keeps balances and upcoming charges immediately legible."
+description: "A premium sculpted finance system with clear tactile contours and immediately legible data."
 colors:
   accent: "#176dfa"
   accent-strong: "#0c5ee5"
   accent-soft: "#dbe8ff"
-  canvas: "#f0f1f4"
-  surface: "#fbfbfd"
-  surface-solid: "#ffffff"
-  surface-inset: "#eceff3"
+  canvas: "#eef1f5"
+  surface: "#f4f6f9"
+  surface-solid: "#fcfdff"
+  surface-inset: "#e7ebf0"
   ink: "#111b31"
   muted: "#515a6e"
   positive: "#18834e"
@@ -96,7 +96,7 @@ components:
     padding: "0 14px"
     height: "50px"
   segment-container:
-    backgroundColor: "{colors.surface-inset}"
+    backgroundColor: "{colors.surface}"
     rounded: "{rounded.inset}"
     padding: "{spacing.micro}"
   segment-item:
@@ -106,7 +106,7 @@ components:
     padding: "0 13px"
     height: "34px"
   segment-item-active:
-    backgroundColor: "{colors.accent}"
+    backgroundColor: "restrained cobalt bevel gradient"
     textColor: "#ffffff"
   nav-item:
     textColor: "{colors.muted}"
@@ -124,15 +124,15 @@ components:
 
 **Creative North Star: "The Quiet Current"**
 
-Tally feels like a calm current: a pearl-grey field, shallow cool highlight-and-shadow pairs, graphite type, and rare cobalt action. Minimalism controls density; Neumorphism supplies material feedback only where touch and hierarchy benefit from it.
+Tally feels like a calm current shaped into premium tactile surfaces: a pearl-grey field, crisp directional highlight-and-shadow contours, graphite type, and cobalt action. The approved reference determines the material expression; there is no fixed Minimalism/Neumorphism ratio.
 
-The system favors immediate financial legibility, quiet rows, explicit states, and generous breathing room. It rejects both the dense finance cockpit and detail-heavy Neumorphism that causes eye strain; depth never carries meaning by itself. Mobile web sets the default density and touch behavior, while wider layouts add working room without shrinking controls.
+The system favors immediate financial legibility, explicit states, generous breathing room, and clearly sculpted panel edges. Depth never carries meaning by itself. Mobile web sets the default density and touch behavior, while wider layouts add working room without shrinking controls.
 
 **Key Characteristics:**
 
 - Pearl-grey ground with near-white material surfaces.
 - One cobalt action family with restrained semantic color.
-- Shallow cool depth, never more than one raised layer.
+- Sculpted directional depth: a crisp white upper-left lip and cool grey lower-right rim precede the wider shadow lobes.
 - Graphite Geist typography with tabular financial numerals.
 - Quiet divider-led rows and at least 44px mobile targets.
 - Surface corners at 16–20px; controls at 12px.
@@ -203,15 +203,15 @@ Spacing is anchored to 4, 8, 12, 16, 24, and 32px. Mobile uses 16px gutters, tig
 
 ## Elevation & Depth
 
-Depth is a restrained hybrid of tonal layering and cool Neumorphic shadows. Raised panels use one highlight/shadow pair; compact controls use a smaller pair; recessed groups use one inset pair.
+Depth follows the approved reference. Raised panels use a crisp one-pixel directional exterior contour plus broad upper-left highlight and lower-right shadow lobes; compact controls use the same geometry at smaller scale. Inset treatment is reserved for genuinely recessed fields and pressed states.
 
 ### Shadow Vocabulary
 
-- **Raised:** -8px -8px 20px rgba(255,255,255,0.96), 9px 9px 24px rgba(111,125,147,0.2); tightened below 768px.
-- **Control:** -4px -4px 10px rgba(255,255,255,0.96), 5px 5px 12px rgba(111,125,147,0.18).
-- **Inset:** inset 3px 3px 8px rgba(111,125,147,0.18), inset -3px -3px 8px rgba(255,255,255,0.9).
+- **Raised:** -1px -1px white lip, 1px 1px cool-grey rim, then -10px -10px / 10px 12px highlight-and-shadow lobes; tightened below 768px.
+- **Control:** the same directional lips with -5px -5px / 6px 7px compact lobes.
+- **Inset:** inset 3px 3px 8px cool-grey and inset -3px -3px 8px white, plus a faint internal rim.
 
-**The One-Layer Rule.** A raised surface may contain flat or inset children, never another raised panel.
+**The Contour Rule.** Every primary panel and raised control must retain a visible exterior lip against the canvas; never substitute a centered neutral blur that dissolves the edge.
 
 **The Meaning Before Material Rule.** State must remain clear through text, color, or focus treatment when shadows are removed.
 
@@ -224,21 +224,21 @@ Panels use softly rounded 20px corners on desktop and 16px on mobile. Controls u
 ### Buttons
 
 - **Shape:** Compact tactile controls (12px radius) with a 46px minimum height.
-- **Primary:** White text on cobalt with 18px horizontal padding and a shallow accent shadow.
+- **Primary:** White text on a restrained cobalt bevel gradient with 18px horizontal padding, a directional lip, and a compact accent shadow.
 - **Hover / Focus:** Deep cobalt on hover; a 3px cobalt-mixed outline with visible offset on keyboard focus; scale to 0.98 on press.
 - **Secondary:** Graphite on Cloud Surface with the compact control shadow.
 
 ### Chips
 
-- **Style:** Metadata pills use a full radius and quiet tint. Segmented controls sit in an 11px inset container with 8px selections.
-- **State:** Selected segments use solid cobalt and white text; unselected choices remain muted and flat.
+- **Style:** Metadata pills use a full radius and quiet tint. Segmented controls sit in an 11px raised tray with a clear exterior contour and 8px selections.
+- **State:** Selected segments use the restrained cobalt bevel and white text; unselected choices remain muted and flat inside the raised tray.
 
 ### Cards / Containers
 
 - **Corner Style:** 20px desktop and 16px mobile.
 - **Background:** Cloud Surface over Pearl Ground.
-- **Shadow Strategy:** One raised layer only.
-- **Border:** None at panel level; use hairlines between rows.
+- **Shadow Strategy:** One directional 1px exterior lip plus the paired upper-left highlight and lower-right shadow lobes.
+- **Border:** No separate flat border; the directional shadow lip supplies the visible contour. Use hairlines only between flat data rows.
 - **Internal Padding:** Usually 24px desktop and 18px mobile.
 
 ### Inputs / Fields
@@ -249,11 +249,11 @@ Panels use softly rounded 20px corners on desktop and 16px on mobile. Controls u
 
 ### Navigation
 
-Desktop items are 52px-high quiet rows with solid cobalt active states. Mobile destinations retain at least 44px targets; active state uses both cobalt color and aria-current. The central mobile action is a 54px cobalt control.
+Desktop items are 52px-high raised controls with cobalt bevel active states. Mobile destinations retain at least 44px targets; active state uses both cobalt color and aria-current. The central mobile action is a 54px cobalt control.
 
 ### Quiet Rows
 
-Financial rows remain flat inside their parent surface, separated by a single hairline. Labels and supporting metadata yield to tabular values; leading marks use restrained 10px corners.
+Transaction rows remain flat inside their parent surface and use a single hairline. Subscription previews on the overview are raised controls matching the reference; labels and metadata yield to tabular values, and leading marks use restrained 10px corners.
 
 ## Do's and Don'ts
 
@@ -266,12 +266,13 @@ Financial rows remain flat inside their parent surface, separated by a single ha
 - **Do** pair positive, negative, and warning color with explicit copy or labels.
 - **Do** use the canonical Tally icon without redrawing, recoloring, or adding a competing shadow treatment.
 - **Do** treat English and Vietnamese as complete, equivalent interface states; English is the initial state.
+- **Do** preserve the reference-faithful exterior contour on panels, tabs, secondary controls, and subscription preview rows in both themes.
 
 ### Don't:
 
-- **Don't** recreate detail-heavy Neumorphism, deep embossing, or more than one raised layer.
 - **Don't** use shadow alone to communicate selection, status, validation, or interactivity.
-- **Don't** add gradients or a competing brand accent to make the interface feel more premium.
+- **Don't** blur a raised surface into the canvas with a centered halo or remove its directional one-pixel lip.
+- **Don't** introduce gradients outside the restrained cobalt bevel and subtle directional surface shading defined by this system.
 - **Don't** compress rows or controls to fit more finance data into the first view.
 - **Don't** promote page-specific charts, renewal geometry, or dashboard column arrangements into global component rules.
 - **Don't** reuse the former product name or the retired bar/tile marks on any active surface.

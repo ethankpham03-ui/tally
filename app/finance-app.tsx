@@ -79,6 +79,11 @@ const chartData: Record<string, number[]> = {
   '6m': [4, 7, -3, 10, 6, 13, -5, 8, 11, -2, 9, 15],
   '1y': [5, 9, 7, 12, -2, 15, 11, 17, 13, 18, 16, 20],
 };
+const renewalOrbitPoints: Record<number, ReadonlyArray<{ x: number; y: number }>> = {
+  1: [{ x: 142, y: 80 }],
+  2: [{ x: 127, y: 40 }, { x: 127, y: 120 }],
+  3: [{ x: 112, y: 27 }, { x: 142, y: 80 }, { x: 112, y: 133 }],
+};
 const navItems: Array<{ id: View; icon: typeof House }> = [
   { id: 'overview', icon: House }, { id: 'transactions', icon: ArrowsDownUp },
   { id: 'subscriptions', icon: CreditCard }, { id: 'budgets', icon: ChartDonut },
@@ -325,25 +330,51 @@ function Overview({ balance, income, expense, transactions, subscriptions, subsc
 }
 
 function RenewalSchedule({ subscriptions, onOpen, className = '' }: { subscriptions: Subscription[]; onOpen: () => void; className?: string }) {
-  const { c, formatCurrency, formatDate, plural } = useI18n();
+  const { c, formatDate, plural } = useI18n();
+  const plotted = subscriptions.slice(0, 3);
+  const points = renewalOrbitPoints[plotted.length] ?? [];
+  const firstPoint = points[0];
+  const lastPoint = points[points.length - 1];
   return (
     <section className={`renewal-schedule ${className}`.trim()} aria-label={c.renewals.scheduleAria}>
-      <div className="renewal-schedule-summary">
-        <span className="renewal-count-token" aria-hidden="true">{subscriptions.length}</span>
-        <span className="renewal-summary-copy"><strong>{c.renewals.scheduleTitle}</strong><small>{plural('renewals.upcomingCount', subscriptions.length)}</small></span>
-      </div>
-      {subscriptions.length > 0 ? (
-        <ol className="renewal-timeline">
-          {subscriptions.map((item) => (
-            <li key={item.id}>
-              <button className="renewal-event" type="button" onClick={onOpen}>
-                <span className={`service-mark ${item.tone}`} aria-hidden="true">{item.monogram}</span>
-                <span className="renewal-event-copy"><strong>{item.name}</strong><small><time dateTime={item.nextRenewal}>{formatDate(item.nextRenewal)}</time><span aria-hidden="true"> · </span>{plural('renewals.daysAway', daysUntil(item.nextRenewal))}</small></span>
-                <strong className="renewal-event-amount">{formatCurrency(item.amount)}</strong>
-              </button>
-            </li>
-          ))}
-        </ol>
+      <h2 className="renewal-schedule-mobile-title">{c.renewals.title}</h2>
+      {plotted.length > 0 ? (
+        <div className="renewal-orbit-layout">
+          <div className="renewal-orbit-figure" aria-hidden="true">
+            <svg className="renewal-orbit" viewBox="0 0 160 160">
+              <circle className="renewal-orbit-track" cx="80" cy="80" r="62" pathLength="100" />
+              <circle className="renewal-orbit-lip" cx="80" cy="80" r="62" pathLength="100" />
+              {plotted.length > 1 && firstPoint && lastPoint && (
+                <path className="renewal-orbit-window" d={`M ${firstPoint.x} ${firstPoint.y} A 62 62 0 0 1 ${lastPoint.x} ${lastPoint.y}`} />
+              )}
+              {plotted.map((item, index) => (
+                <g className="renewal-orbit-marker" data-slot={index + 1} transform={`translate(${points[index].x} ${points[index].y})`} key={item.id}>
+                  <circle className="renewal-orbit-marker-halo" r="13" />
+                  <circle className="renewal-orbit-marker-dot" r="10" />
+                  <text className="renewal-orbit-marker-index" y="0.5">{index + 1}</text>
+                </g>
+              ))}
+            </svg>
+            <span className="renewal-orbit-center">
+              <strong>{plotted.length}</strong>
+              <small>{plural('renewals.upcomingCount', plotted.length)}</small>
+            </span>
+          </div>
+          <ol className="renewal-orbit-list" style={{ gridTemplateRows: `repeat(${plotted.length}, minmax(0, 1fr))` }}>
+            {plotted.map((item, index) => (
+              <li key={item.id}>
+                <button className="renewal-orbit-row" type="button" onClick={onOpen}>
+                  <span className="renewal-orbit-key" aria-hidden="true">{index + 1}</span>
+                  <span className="renewal-orbit-copy">
+                    <span className="sr-only">{item.name}: </span>
+                    <strong><time dateTime={item.nextRenewal}>{formatDate(item.nextRenewal)}</time></strong>
+                    <small>{plural('renewals.daysAway', daysUntil(item.nextRenewal))}</small>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </div>
       ) : <p className="renewal-empty">{c.renewals.emptySchedule}</p>}
     </section>
   );
@@ -383,6 +414,16 @@ function SubscriptionOverview({ subscriptions, monthlyTotal, onOpen }: { subscri
     <aside className="subscription-overview surface-raised" aria-labelledby="renewal-title">
       <div className="section-heading"><h2 id="renewal-title">{c.renewals.title}</h2><button type="button" className="icon-plain" onClick={onOpen} aria-label={c.renewals.openAria}><DotsThree size={22} weight="bold" aria-hidden="true" /></button></div>
       <RenewalSchedule subscriptions={subscriptions} onOpen={onOpen} />
+      <div className="subscription-preview-list">
+        {subscriptions.map((item) => (
+          <button className="subscription-preview-row" type="button" onClick={onOpen} key={item.id}>
+            <span className={`service-mark ${item.tone}`} aria-hidden="true">{item.monogram}</span>
+            <span className="subscription-preview-copy"><strong>{item.name}</strong><small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small></span>
+            <strong className="subscription-preview-price">{formatCurrency(item.amount)}</strong>
+            <CaretRight size={16} weight="bold" aria-hidden="true" />
+          </button>
+        ))}
+      </div>
       <button className="subscription-total" type="button" onClick={onOpen}><span>{c.renewals.totalPerMonth}</span><strong>{formatCurrency(monthlyTotal)}</strong></button><p className="demo-note">{c.common.demoData}</p>
     </aside>
   );

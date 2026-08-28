@@ -1,16 +1,20 @@
 @import 'tailwindcss';
 
 :root {
-  --canvas: #f0f1f4;
-  --surface: #fbfbfd;
-  --surface-solid: #ffffff;
-  --surface-inset: #eceff3;
+  --canvas: #eef1f5;
+  --surface: #f4f6f9;
+  --surface-solid: #fcfdff;
+  --surface-inset: #e7ebf0;
+  --surface-gradient: linear-gradient(145deg, #f8fafc 0%, #f4f6f9 62%, #eef1f5 100%);
+  --control-gradient: linear-gradient(145deg, #fafbfd 0%, #f3f5f8 72%, #edf0f4 100%);
   --ink: #111b31;
   --muted: #515a6e;
   --faint: #667085;
   --accent: #176dfa;
   --accent-strong: #0c5ee5;
   --accent-soft: #dbe8ff;
+  --accent-gradient: linear-gradient(145deg, #3187ff 0%, #176dfa 54%, #0759df 100%);
+  --accent-gradient-hover: linear-gradient(145deg, #3e8fff 0%, #176dfa 50%, #064fca 100%);
   --on-accent: #ffffff;
   --positive: #18834e;
   --positive-soft: #e3f5eb;
@@ -27,16 +31,16 @@
   --toast-ink: #ffffff;
   --toast-bg: #202b3d;
   --toast-shadow: 0 18px 40px rgba(17, 27, 49, 0.24);
-  --shadow-light: rgba(255, 255, 255, 0.96);
-  --shadow-dark: rgba(111, 125, 147, 0.2);
-  --shadow-raised: -8px -8px 20px var(--shadow-light), 9px 9px 24px var(--shadow-dark);
-  --shadow-control: -4px -4px 10px var(--shadow-light), 5px 5px 12px rgba(111, 125, 147, 0.18);
-  --shadow-micro: -2px -2px 6px rgba(255, 255, 255, 0.9), 3px 3px 8px rgba(111, 125, 147, 0.16);
-  --shadow-inset: inset 3px 3px 8px rgba(111, 125, 147, 0.18), inset -3px -3px 8px rgba(255, 255, 255, 0.9);
-  --shadow-segment: inset 2px 2px 5px rgba(111, 125, 147, 0.2), inset -2px -2px 5px rgba(255, 255, 255, 0.92), inset 0 0 0 1px rgba(43, 56, 80, 0.045);
-  --shadow-selected: -2px -2px 5px rgba(255, 255, 255, 0.9), 3px 3px 6px rgba(74, 93, 125, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.34);
-  --shadow-accent: 0 9px 20px color-mix(in srgb, var(--accent) 24%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.34);
-  --shadow-accent-small: 0 5px 12px color-mix(in srgb, var(--accent) 24%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  --shadow-light: rgba(255, 255, 255, 0.94);
+  --shadow-dark: rgba(93, 109, 133, 0.24);
+  --shadow-raised: -1px -1px 0 rgba(255, 255, 255, 0.98), 1px 1px 0 rgba(93, 109, 133, 0.11), -10px -10px 24px rgba(255, 255, 255, 0.92), 10px 12px 26px rgba(93, 109, 133, 0.24), inset 1px 1px 0 rgba(255, 255, 255, 0.74), inset -1px -1px 0 rgba(92, 108, 132, 0.05);
+  --shadow-control: -1px -1px 0 rgba(255, 255, 255, 0.96), 1px 1px 0 rgba(93, 109, 133, 0.1), -5px -5px 12px rgba(255, 255, 255, 0.88), 6px 7px 15px rgba(93, 109, 133, 0.21), inset 1px 1px 0 rgba(255, 255, 255, 0.64), inset -1px -1px 0 rgba(92, 108, 132, 0.045);
+  --shadow-micro: -1px -1px 0 rgba(255, 255, 255, 0.94), 1px 1px 0 rgba(93, 109, 133, 0.09), -3px -3px 7px rgba(255, 255, 255, 0.84), 4px 4px 9px rgba(93, 109, 133, 0.19), inset 1px 1px 0 rgba(255, 255, 255, 0.58);
+  --shadow-inset: inset 3px 3px 8px rgba(93, 109, 133, 0.22), inset -3px -3px 8px rgba(255, 255, 255, 0.94), inset 0 0 0 1px rgba(93, 109, 133, 0.055);
+  --shadow-segment: -1px -1px 0 rgba(255, 255, 255, 0.96), 1px 1px 0 rgba(93, 109, 133, 0.1), -4px -4px 10px rgba(255, 255, 255, 0.86), 5px 6px 13px rgba(93, 109, 133, 0.2), inset 1px 1px 0 rgba(255, 255, 255, 0.62);
+  --shadow-selected: -1px -1px 0 rgba(255, 255, 255, 0.68), 1px 1px 0 rgba(0, 55, 170, 0.3), 0 6px 12px rgba(23, 109, 250, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.42), inset 0 -1px 0 rgba(0, 54, 170, 0.24);
+  --shadow-accent: -1px -1px 0 rgba(255, 255, 255, 0.66), 1px 1px 0 rgba(0, 55, 170, 0.3), 0 10px 20px rgba(23, 109, 250, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.44), inset 0 -1px 0 rgba(0, 54, 170, 0.26);
+  --shadow-accent-small: -1px -1px 0 rgba(255, 255, 255, 0.62), 1px 1px 0 rgba(0, 55, 170, 0.28), 0 6px 12px rgba(23, 109, 250, 0.27), inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 rgba(0, 54, 170, 0.24);
   --shadow-nav: 0 -10px 28px rgba(62, 76, 99, 0.12);
   --panel-radius: 20px;
   --control-radius: 12px;
@@ -211,7 +215,7 @@ select {
   border: 0;
   border-radius: var(--control-radius);
   color: var(--muted);
-  background: var(--surface);
+  background: var(--control-gradient);
   box-shadow: var(--shadow-control);
   font-size: 14px;
   font-weight: 620;
@@ -226,7 +230,7 @@ select {
 
 .nav-button.is-active {
   color: var(--on-accent);
-  background: var(--accent);
+  background: var(--accent-gradient);
   box-shadow: var(--shadow-accent);
 }
 
@@ -265,7 +269,7 @@ select {
   border: 0;
   border-radius: var(--control-radius);
   color: var(--muted);
-  background: var(--surface);
+  background: var(--control-gradient);
   box-shadow: var(--shadow-control);
   transition: transform 120ms ease, color 180ms ease;
 }
@@ -363,7 +367,7 @@ select {
   padding: 4px;
   gap: 2px;
   border-radius: 11px;
-  background: var(--surface-inset);
+  background: var(--control-gradient);
   box-shadow: var(--shadow-segment);
   isolation: isolate;
 }
@@ -391,7 +395,7 @@ select {
 .language-option.is-active,
 .language-option[aria-pressed='true'] {
   color: var(--on-accent);
-  background: var(--accent);
+  background: var(--accent-gradient);
   box-shadow: var(--shadow-selected);
 }
 
@@ -455,24 +459,24 @@ select {
 
 .primary-action {
   color: var(--on-accent);
-  background: var(--accent);
+  background: var(--accent-gradient);
   box-shadow: var(--shadow-accent);
 }
 
 .primary-action:hover {
-  background: var(--accent-strong);
+  background: var(--accent-gradient-hover);
 }
 
 .secondary-action,
 .cancel-action {
   color: var(--ink);
-  background: var(--surface);
+  background: var(--control-gradient);
   box-shadow: var(--shadow-control);
 }
 
 .surface-raised {
   border-radius: var(--panel-radius);
-  background: var(--surface);
+  background: var(--surface-gradient);
   box-shadow: var(--shadow-raised);
 }
 
@@ -608,7 +612,7 @@ select {
   padding: 4px;
   gap: 2px;
   border-radius: 11px;
-  background: var(--surface-inset);
+  background: var(--control-gradient);
   box-shadow: var(--shadow-segment);
 }
 
@@ -638,7 +642,7 @@ select {
 .filter-group button.is-active,
 .type-switch button.is-active {
   color: var(--on-accent);
-  background: var(--accent);
+  background: var(--accent-gradient);
   box-shadow: var(--shadow-selected);
 }
 
@@ -742,121 +746,178 @@ select {
 }
 
 .renewal-schedule {
-  margin-top: 16px;
+  margin-top: 10px;
 }
 
-.renewal-schedule-summary {
+.renewal-schedule-mobile-title {
+  display: none;
+}
+
+.renewal-orbit-layout {
+  --orbit-size: 160px;
+  min-height: 196px;
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: var(--orbit-size) minmax(0, 1fr);
   align-items: center;
   gap: 14px;
-  padding: 2px 4px 16px;
+  margin: 0;
 }
 
-.renewal-count-token {
-  width: 52px;
-  height: 52px;
+.renewal-orbit-figure {
+  width: var(--orbit-size);
+  height: var(--orbit-size);
+  position: relative;
+}
+
+.renewal-orbit {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.renewal-orbit-track,
+.renewal-orbit-lip {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 87 13;
+  transform: rotate(70deg);
+  transform-origin: center;
+}
+
+.renewal-orbit-track {
+  stroke: color-mix(in srgb, var(--surface-inset) 86%, var(--muted));
+  stroke-width: 11;
+  filter: drop-shadow(-3px -3px 4px var(--shadow-light)) drop-shadow(4px 4px 5px var(--shadow-dark));
+}
+
+.renewal-orbit-lip {
+  stroke: color-mix(in srgb, var(--surface-solid) 82%, transparent);
+  stroke-width: 2;
+}
+
+.renewal-orbit-window {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 68%, transparent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.renewal-orbit-marker-halo {
+  fill: var(--surface);
+  filter: drop-shadow(0 2px 3px var(--shadow-dark));
+}
+
+.renewal-orbit-marker-dot {
+  fill: var(--accent);
+}
+
+.renewal-orbit-marker-index {
+  fill: var(--on-accent);
+  font-size: 9px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.renewal-orbit-center {
+  position: absolute;
+  inset: 27%;
   display: grid;
-  place-items: center;
-  border-radius: 14px;
-  color: var(--accent);
-  background: var(--surface-inset);
-  box-shadow: var(--shadow-inset);
-  font-size: 24px;
-  font-weight: 780;
-  font-variant-numeric: tabular-nums;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
 }
 
-.renewal-summary-copy strong,
-.renewal-summary-copy small {
+.renewal-orbit-center strong,
+.renewal-orbit-center small {
   display: block;
 }
 
-.renewal-summary-copy strong { font-size: 13px; }
-
-.renewal-summary-copy small {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 11px;
+.renewal-orbit-center strong {
+  color: var(--accent);
+  font-size: 36px;
+  font-weight: 780;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-.renewal-timeline {
-  position: relative;
+.renewal-orbit-center small {
+  max-width: 78px;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.renewal-orbit-list {
+  height: var(--orbit-size);
   display: grid;
-  gap: 3px;
+  gap: 0;
   margin: 0;
-  padding: 8px;
-  border-radius: 16px;
-  background: var(--surface-inset);
-  box-shadow: var(--shadow-inset);
+  padding: 0;
   list-style: none;
 }
 
-.renewal-timeline::before {
-  content: '';
-  position: absolute;
-  top: 30px;
-  bottom: 30px;
-  left: 28px;
-  width: 2px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--accent) 26%, var(--line));
+.renewal-orbit-list li {
+  min-width: 0;
 }
 
-.renewal-timeline li { min-width: 0; }
-
-.renewal-event {
+.renewal-orbit-row {
   width: 100%;
-  min-height: 60px;
-  position: relative;
-  z-index: 1;
+  height: 100%;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
-  gap: 11px;
-  padding: 8px;
+  gap: 9px;
+  padding: 3px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: transparent;
   text-align: left;
   transition: color 160ms ease, background 160ms ease, transform 120ms ease;
 }
 
-.renewal-event:hover {
+.renewal-orbit-row:hover {
   color: var(--accent);
-  background: color-mix(in srgb, var(--surface-solid) 68%, transparent);
+  background: color-mix(in srgb, var(--accent-soft) 38%, transparent);
 }
 
-.renewal-event:active { transform: translateY(1px); }
+.renewal-orbit-row:active {
+  transform: translateY(1px);
+}
 
-.renewal-event-copy,
-.renewal-event-copy strong,
-.renewal-event-copy small {
+.renewal-orbit-key {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--on-accent);
+  background: var(--accent-gradient);
+  box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-micro);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.renewal-orbit-copy,
+.renewal-orbit-copy strong,
+.renewal-orbit-copy small {
   min-width: 0;
   display: block;
 }
 
-.renewal-event-copy strong {
-  overflow: hidden;
+.renewal-orbit-copy strong {
   font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.renewal-event-copy small {
-  margin-top: 4px;
+.renewal-orbit-copy small {
+  margin-top: 3px;
   overflow: hidden;
   color: var(--muted);
   font-size: 10px;
-  line-height: 1.4;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.renewal-event-amount {
-  color: var(--ink);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -869,6 +930,69 @@ select {
   box-shadow: var(--shadow-inset);
   font-size: 12px;
   text-align: center;
+}
+
+.subscription-preview-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.subscription-preview-row {
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--control-radius);
+  color: var(--ink);
+  background: var(--control-gradient);
+  box-shadow: var(--shadow-control);
+  text-align: left;
+  transition: color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+.subscription-preview-row:hover {
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.subscription-preview-row:active {
+  box-shadow: var(--shadow-inset);
+  transform: translateY(1px);
+}
+
+.subscription-preview-copy,
+.subscription-preview-copy strong,
+.subscription-preview-copy small {
+  min-width: 0;
+  display: block;
+}
+
+.subscription-preview-copy strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subscription-preview-copy small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subscription-preview-price {
+  color: var(--ink);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .service-mark {
@@ -1232,10 +1356,10 @@ select {
 @media (max-width: 768px) {
   :root {
     --panel-radius: 16px;
-    --shadow-raised: -5px -5px 14px var(--shadow-light), 6px 6px 17px var(--shadow-dark);
-    --shadow-control: -3px -3px 8px var(--shadow-light), 4px 4px 10px rgba(111, 125, 147, 0.16);
-    --shadow-micro: -2px -2px 5px rgba(255, 255, 255, 0.88), 3px 3px 7px rgba(111, 125, 147, 0.14);
-    --shadow-inset: inset 2px 2px 6px rgba(111, 125, 147, 0.17), inset -2px -2px 6px rgba(255, 255, 255, 0.88);
+    --shadow-raised: -1px -1px 0 rgba(255, 255, 255, 0.98), 1px 1px 0 rgba(93, 109, 133, 0.11), -6px -6px 16px rgba(255, 255, 255, 0.9), 7px 8px 19px rgba(93, 109, 133, 0.23), inset 1px 1px 0 rgba(255, 255, 255, 0.72), inset -1px -1px 0 rgba(92, 108, 132, 0.05);
+    --shadow-control: -1px -1px 0 rgba(255, 255, 255, 0.96), 1px 1px 0 rgba(93, 109, 133, 0.1), -4px -4px 9px rgba(255, 255, 255, 0.86), 5px 5px 11px rgba(93, 109, 133, 0.2), inset 1px 1px 0 rgba(255, 255, 255, 0.62);
+    --shadow-micro: -1px -1px 0 rgba(255, 255, 255, 0.94), 1px 1px 0 rgba(93, 109, 133, 0.09), -2px -2px 5px rgba(255, 255, 255, 0.82), 3px 3px 7px rgba(93, 109, 133, 0.18), inset 1px 1px 0 rgba(255, 255, 255, 0.56);
+    --shadow-inset: inset 2px 2px 6px rgba(93, 109, 133, 0.2), inset -2px -2px 6px rgba(255, 255, 255, 0.92), inset 0 0 0 1px rgba(93, 109, 133, 0.05);
   }
 
   .app-frame {
@@ -1278,7 +1402,7 @@ select {
   .desktop-language-switch { display: none; }
   .mobile-language-switch { display: inline-grid; }
   .mobile-appbar .language-switch { margin-left: 2px; }
-  .mobile-appbar .icon-control { width: 44px; height: 44px; background: var(--surface); box-shadow: var(--shadow-micro); }
+  .mobile-appbar .icon-control { width: 44px; height: 44px; background: var(--control-gradient); box-shadow: var(--shadow-micro); }
   .avatar { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; color: var(--accent-strong); background: var(--accent-soft); box-shadow: var(--shadow-micro); font-size: 11px; font-weight: 760; }
 
   .page-header {
@@ -1329,12 +1453,52 @@ select {
     padding: 18px;
   }
 
-  .mobile-renewal-schedule .renewal-schedule-summary {
-    padding-inline: 2px;
+  .mobile-renewal-schedule .renewal-schedule-mobile-title {
+    display: block;
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
-  .mobile-renewal-schedule .renewal-event {
-    min-height: 62px;
+  .mobile-renewal-schedule .renewal-orbit-layout {
+    --orbit-size: 118px;
+    min-height: 118px;
+    grid-template-columns: var(--orbit-size) minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .mobile-renewal-schedule .renewal-orbit-center strong {
+    font-size: 28px;
+  }
+
+  .mobile-renewal-schedule .renewal-orbit-center small {
+    max-width: 58px;
+    margin-top: 4px;
+    font-size: 8px;
+    line-height: 1.25;
+  }
+
+  .mobile-renewal-schedule .renewal-orbit-row {
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 7px;
+    padding: 1px;
+  }
+
+  .mobile-renewal-schedule .renewal-orbit-key {
+    width: 17px;
+    height: 17px;
+    box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-micro);
+    font-size: 8px;
+  }
+
+  .mobile-renewal-schedule .renewal-orbit-copy strong {
+    font-size: 11px;
+  }
+
+  .mobile-renewal-schedule .renewal-orbit-copy small {
+    margin-top: 2px;
+    font-size: 9px;
   }
 
   .cashflow-panel,
@@ -1424,7 +1588,7 @@ select {
     margin-top: -17px;
     border-radius: 16px;
     color: var(--on-accent);
-    background: var(--accent);
+    background: var(--accent-gradient);
     box-shadow: var(--shadow-accent);
   }
 
@@ -1517,8 +1681,9 @@ select {
   .summary-metric strong { font-size: 14px; }
   .mobile-appbar .notification-control { display: none; }
   .mobile-renewal-schedule { padding: 16px 14px; }
-  .renewal-event { gap: 9px; padding-inline: 6px; }
-  .renewal-event-amount { font-size: 10px; }
+  .mobile-renewal-schedule .renewal-orbit-layout { --orbit-size: 112px; gap: 7px; }
+  .mobile-renewal-schedule .renewal-orbit-copy strong { font-size: 10px; }
+  .mobile-renewal-schedule .renewal-orbit-copy small { font-size: 8px; }
   .mobile-bottom-nav > button { font-size: 10px; }
 }
 
@@ -1538,12 +1703,16 @@ select {
   --surface: #1d2430;
   --surface-solid: #252e3b;
   --surface-inset: #151b24;
+  --surface-gradient: linear-gradient(145deg, #252e3b 0%, #1d2430 62%, #19202b 100%);
+  --control-gradient: linear-gradient(145deg, #28313f 0%, #202834 68%, #1a212c 100%);
   --ink: #edf2fb;
   --muted: #b5bfd0;
   --faint: #8e99ad;
   --accent: #76a3ff;
   --accent-strong: #91b4ff;
   --accent-soft: #263c63;
+  --accent-gradient: linear-gradient(145deg, #91b4ff 0%, #76a3ff 54%, #5d8fe9 100%);
+  --accent-gradient-hover: linear-gradient(145deg, #a1c0ff 0%, #83adff 52%, #6797ef 100%);
   --on-accent: #0b1730;
   --positive: #69d29d;
   --positive-soft: #203b31;
@@ -1562,21 +1731,23 @@ select {
   --toast-shadow: 0 18px 42px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   --shadow-light: rgba(72, 85, 106, 0.18);
   --shadow-dark: rgba(3, 6, 11, 0.62);
-  --shadow-raised: -8px -8px 20px rgba(57, 69, 89, 0.5), 9px 9px 24px rgba(3, 6, 11, 0.58);
-  --shadow-control: -4px -4px 10px rgba(57, 69, 89, 0.46), 5px 5px 12px rgba(3, 6, 11, 0.54);
-  --shadow-micro: -2px -2px 6px rgba(57, 69, 89, 0.42), 3px 3px 8px rgba(3, 6, 11, 0.48);
-  --shadow-inset: inset 3px 3px 8px rgba(3, 6, 11, 0.58), inset -3px -3px 8px rgba(57, 69, 89, 0.34);
-  --shadow-segment: inset 2px 2px 5px rgba(3, 6, 11, 0.62), inset -2px -2px 5px rgba(57, 69, 89, 0.38), inset 0 0 0 1px rgba(237, 242, 251, 0.035);
-  --shadow-selected: -2px -2px 5px rgba(57, 69, 89, 0.5), 3px 3px 6px rgba(3, 6, 11, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --shadow-raised: -1px -1px 0 rgba(107, 124, 151, 0.22), 1px 1px 0 rgba(0, 0, 0, 0.44), -9px -9px 22px rgba(54, 67, 87, 0.42), 10px 12px 25px rgba(1, 4, 8, 0.66), inset 1px 1px 0 rgba(255, 255, 255, 0.05), inset -1px -1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-control: -1px -1px 0 rgba(107, 124, 151, 0.2), 1px 1px 0 rgba(0, 0, 0, 0.42), -5px -5px 12px rgba(54, 67, 87, 0.38), 6px 7px 15px rgba(1, 4, 8, 0.58), inset 1px 1px 0 rgba(255, 255, 255, 0.045), inset -1px -1px 0 rgba(0, 0, 0, 0.18);
+  --shadow-micro: -1px -1px 0 rgba(107, 124, 151, 0.18), 1px 1px 0 rgba(0, 0, 0, 0.4), -3px -3px 7px rgba(54, 67, 87, 0.34), 4px 4px 9px rgba(1, 4, 8, 0.52), inset 1px 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-inset: inset 3px 3px 8px rgba(1, 4, 8, 0.64), inset -3px -3px 8px rgba(66, 80, 103, 0.36), inset 0 0 0 1px rgba(237, 242, 251, 0.04);
+  --shadow-segment: -1px -1px 0 rgba(107, 124, 151, 0.2), 1px 1px 0 rgba(0, 0, 0, 0.42), -4px -4px 10px rgba(54, 67, 87, 0.36), 5px 6px 13px rgba(1, 4, 8, 0.56), inset 1px 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-selected: -1px -1px 0 rgba(255, 255, 255, 0.22), 1px 1px 0 rgba(0, 0, 0, 0.38), 0 6px 12px rgba(59, 113, 218, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(21, 53, 112, 0.32);
+  --shadow-accent: -1px -1px 0 rgba(255, 255, 255, 0.24), 1px 1px 0 rgba(0, 0, 0, 0.4), 0 10px 20px rgba(59, 113, 218, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(21, 53, 112, 0.34);
+  --shadow-accent-small: -1px -1px 0 rgba(255, 255, 255, 0.22), 1px 1px 0 rgba(0, 0, 0, 0.38), 0 6px 12px rgba(59, 113, 218, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(21, 53, 112, 0.32);
   --shadow-nav: 0 -10px 28px rgba(3, 6, 11, 0.42);
   color-scheme: dark;
 }
 
 @media (max-width: 768px) {
   :root[data-theme='dark'] {
-    --shadow-raised: -5px -5px 14px rgba(53, 64, 82, 0.46), 6px 6px 17px rgba(4, 7, 12, 0.5);
-    --shadow-control: -3px -3px 8px rgba(53, 64, 82, 0.4), 4px 4px 10px rgba(4, 7, 12, 0.46);
-    --shadow-micro: -2px -2px 5px rgba(53, 64, 82, 0.36), 3px 3px 7px rgba(4, 7, 12, 0.4);
-    --shadow-inset: inset 2px 2px 6px rgba(4, 7, 12, 0.5), inset -2px -2px 6px rgba(53, 64, 82, 0.3);
+    --shadow-raised: -1px -1px 0 rgba(107, 124, 151, 0.2), 1px 1px 0 rgba(0, 0, 0, 0.42), -6px -6px 16px rgba(54, 67, 87, 0.38), 7px 8px 19px rgba(1, 4, 8, 0.62), inset 1px 1px 0 rgba(255, 255, 255, 0.045), inset -1px -1px 0 rgba(0, 0, 0, 0.18);
+    --shadow-control: -1px -1px 0 rgba(107, 124, 151, 0.18), 1px 1px 0 rgba(0, 0, 0, 0.4), -4px -4px 9px rgba(54, 67, 87, 0.34), 5px 5px 11px rgba(1, 4, 8, 0.54), inset 1px 1px 0 rgba(255, 255, 255, 0.04);
+    --shadow-micro: -1px -1px 0 rgba(107, 124, 151, 0.16), 1px 1px 0 rgba(0, 0, 0, 0.38), -2px -2px 5px rgba(54, 67, 87, 0.3), 3px 3px 7px rgba(1, 4, 8, 0.48), inset 1px 1px 0 rgba(255, 255, 255, 0.035);
+    --shadow-inset: inset 2px 2px 6px rgba(1, 4, 8, 0.58), inset -2px -2px 6px rgba(66, 80, 103, 0.32), inset 0 0 0 1px rgba(237, 242, 251, 0.035);
   }
 }
