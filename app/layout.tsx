@@ -18,9 +18,12 @@ export const metadata: Metadata = {
   description: 'Track cash flow, budgets, and recurring subscriptions in one clear place.',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: [{ url: '/tally-icon.png', type: 'image/png' }],
-    shortcut: [{ url: '/tally-icon.png', type: 'image/png' }],
-    apple: [{ url: '/tally-icon.png', type: 'image/png' }],
+    icon: [
+      { url: '/tally-icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/tally-icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/tally-icon-192.png',
+    apple: [{ url: '/tally-icon-192.png', sizes: '192x192', type: 'image/png' }],
   },
   openGraph: {
     title: 'Tally | Clear cash flow',
@@ -44,7 +47,7 @@ OWN-WORLD: Pearl-grey ground, shallow cool Neumorphic depth, graphite type, coba
 STORY: See what remains, record what changed, then inspect what renews next.
 FIRST VIEWPORT: Mobile opens with a compact app bar, balance, two summaries, nearest renewal, and one calm chart. Desktop expands into a left overview and right subscription column.
 FORM: Minimal Neumorphism hi-fi console, grounded candidate four, seed bbe0db65.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+FINISH: Local-first finance state, responsive interactions, documentation, automated tests, and production build verification are part of the shipping bar.
 -->`;
 
 const themeBootstrapScript = `(function(){try{var stored=window.localStorage.getItem('tally-theme');var theme=stored==='light'||stored==='dark'?stored:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');var root=document.documentElement;root.dataset.theme=theme;root.style.colorScheme=theme;}catch(error){}})();`;

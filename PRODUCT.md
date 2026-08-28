@@ -24,7 +24,7 @@ Kết nối quản lý thu chi với quản lý subscription: một kỳ gia h�
 - Người dùng kiểm tra tổng quan tài chính nhiều lần trong tháng.
 - Người dùng ghi giao dịch khi phát sinh hoặc bổ sung sau.
 - Người dùng theo dõi ngày gia hạn, chu kỳ thanh toán, giá và trạng thái của các dịch vụ trả phí.
-- Tally là ứng dụng local-only: không đăng nhập, không hồ sơ tài khoản và không đồng bộ cloud. Bản đầu dùng dữ liệu minh họa trong phiên để chứng minh trải nghiệm.
+- Tally là ứng dụng local-first: không đăng nhập, không hồ sơ tài khoản và không đồng bộ cloud. Dữ liệu tài chính được lưu có phiên bản trong chính trình duyệt trên thiết bị; người dùng có thể xuất hoặc nhập file sao lưu.
 
 ## Capabilities and Constraints
 
@@ -32,7 +32,10 @@ Kết nối quản lý thu chi với quản lý subscription: một kỳ gia h�
 - Quản lý giao dịch và danh mục.
 - Ngân sách theo danh mục.
 - Quản lý gói đăng ký, ngày gia hạn, chu kỳ, trạng thái và chi phí quy đổi theo tháng.
-- Cảnh báo khoản sắp gia hạn và tự liên kết phí định kỳ với giao dịch là hướng chức năng cốt lõi.
+- Cảnh báo khoản sắp gia hạn và cho phép người dùng chủ động ghi nhận kỳ phí thành giao dịch; Tally không tự trừ tiền chỉ vì ngày gia hạn đã đến.
+- Số dư, tổng thu/chi tháng, mức dùng ngân sách và biểu đồ dòng tiền đều được suy ra từ một sổ giao dịch duy nhất.
+- Thêm, sửa và xóa giao dịch, gói đăng ký và hạn mức ngân sách; các thao tác xóa có thể hoàn tác.
+- Cài đặt dữ liệu local cho phép chỉnh số dư đầu kỳ, xuất/nhập bản sao lưu, khôi phục dữ liệu mẫu theo ngày hiện tại và xóa sạch có xác nhận.
 - Hỗ trợ đầy đủ tiếng Anh và tiếng Việt; tiếng Anh là ngôn ngữ mặc định.
 - Giao diện responsive cho desktop và mobile web.
 - Mobile web là bề mặt sử dụng chính: luồng xem số dư, thêm giao dịch và kiểm tra kỳ gia hạn phải tối ưu cho chiều rộng 360-430px và thao tác một tay.
@@ -59,3 +62,4 @@ Kết nối quản lý thu chi với quản lý subscription: một kỳ gia h�
 3. Chiều sâu thị giác không được làm mờ trạng thái, số tiền hoặc hành động chính.
 4. Dữ liệu demo giữ ngữ cảnh Việt Nam; giao diện mặc định bằng tiếng Anh và có bản dịch tiếng Việt đầy đủ để recruiter tự khám phá sản phẩm ở cả hai locale.
 5. Tính năng portfolio phải hoạt động và có trạng thái thật, không chỉ là màn hình tĩnh.
+6. Dữ liệu người dùng không rời thiết bị; mọi giới hạn của local storage phải được nói rõ và có luồng sao lưu chủ động.

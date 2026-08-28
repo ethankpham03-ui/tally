@@ -49,17 +49,19 @@ An individual checks available balance, records a transaction, and sees which pa
 | Type ramp | 12px meta, 14px body, 16-18px labels, 28px mobile balance, 42-52px desktop balance | semantic CSS classes |
 | Navigation | four core destinations plus settings as secondary | Phosphor icons + semantic buttons |
 | Balance and summaries | one dominant number, two quiet supporting metrics | semantic HTML/CSS |
-| Cashflow | short bar history with selectable period | semantic buttons + CSS bars; no raster |
+| Cashflow | ledger-derived bar history with selectable period | semantic buttons + CSS bars; no raster |
 | Renewal arc | single open circular arc with three indexed due markers aligned to three indexed date rows | inline SVG geometry plus semantic text; mobile retains the same chart type |
 | Subscription rows | three rows on overview, complete list in its tab | semantic HTML + service monograms |
 | Transactions | newest-first compact rows and filters | semantic list + Phosphor icons |
-| Forms | add transaction and add subscription | accessible dialog on desktop, bottom sheet on mobile |
+| Forms | add/edit transaction, subscription and budget; local-data settings | accessible dialog on desktop, bottom sheet on mobile |
 | Motion | short press, dialog and tab transitions that communicate state change | CSS transforms/opacity with reduced-motion fallback |
 
 ## Constraints and open decisions
 
-- Demo data is explicitly labeled; no commercial claims or real-user evidence is fabricated.
-- The first release is explicitly local-only and uses in-memory demo state. It has no authentication, account profile, or cloud persistence; the app shell must not imply otherwise with an avatar or account affordance.
+- Demo data is generated relative to the current date and can be restored explicitly; no commercial claims or real-user evidence is fabricated.
+- The first release is explicitly device-local. It stores one versioned finance record in browser storage, persists locale and theme, and supports JSON backup/restore. It has no authentication, account profile, server write, or cloud sync; the app shell must not imply otherwise with an avatar or account affordance.
+- Balance, monthly totals, budget usage and cashflow are derived from the transaction ledger. Subscription forecasts enter that ledger only after the user explicitly records a payment.
+- Destructive local-data actions require confirmation; row deletion offers Undo.
 - Neumorphic depth may not carry meaning by itself; text, icons and focus outlines must remain legible in bright mobile conditions.
 - `Tally` is the confirmed product name and is never localized.
 - English (`en`) is the default interface; Vietnamese (`vi`) must provide complete copy and equivalent accessible names without changing the information architecture.
