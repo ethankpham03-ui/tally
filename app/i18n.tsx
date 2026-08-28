@@ -38,6 +38,10 @@ const enCatalog = {
     en: 'English',
     vi: 'Tiếng Việt',
   },
+  theme: {
+    useDark: 'Use dark appearance',
+    useLight: 'Use light appearance',
+  },
   nav: {
     overview: 'Overview',
     transactions: 'Transactions',
@@ -108,6 +112,9 @@ const enCatalog = {
   renewals: {
     title: 'Renewals',
     openAria: 'Open subscription management',
+    scheduleTitle: 'Upcoming charges',
+    scheduleAria: 'Upcoming subscription renewal schedule',
+    emptySchedule: 'No upcoming renewals.',
     upcomingCount: {
       one: '{count} upcoming renewal',
       other: '{count} upcoming renewals',
@@ -259,6 +266,10 @@ const viCatalog = {
     en: 'English',
     vi: 'Tiếng Việt',
   },
+  theme: {
+    useDark: 'Dùng giao diện tối',
+    useLight: 'Dùng giao diện sáng',
+  },
   nav: {
     overview: 'Tổng quan',
     transactions: 'Giao dịch',
@@ -329,6 +340,9 @@ const viCatalog = {
   renewals: {
     title: 'Kỳ gia hạn',
     openAria: 'Mở quản lý gói đăng ký',
+    scheduleTitle: 'Các khoản sắp thu',
+    scheduleAria: 'Lịch gia hạn gói đăng ký sắp tới',
+    emptySchedule: 'Không có kỳ gia hạn sắp tới.',
     upcomingCount: {
       one: '{count} kỳ sắp tới',
       other: '{count} kỳ sắp tới',

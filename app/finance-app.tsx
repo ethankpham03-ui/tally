@@ -3,8 +3,8 @@
 import {
   ArrowCounterClockwise, ArrowDownRight, ArrowUpRight, ArrowsDownUp, Bank, Bell,
   CalendarBlank, CaretRight, ChartDonut, Check, CreditCard, DotsThree, ForkKnife,
-  GearSix, House, MagnifyingGlass, Pause, Play, Plus, Receipt, ShoppingCart, Trash,
-  TrendUp, Wallet, WarningCircle, X,
+  GearSix, House, MagnifyingGlass, Moon, Pause, Play, Plus, Receipt, ShoppingCart,
+  Sun, Trash, TrendUp, Wallet, WarningCircle, X,
 } from '@phosphor-icons/react';
 import Image from 'next/image';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
@@ -17,6 +17,7 @@ type View = 'overview' | 'transactions' | 'subscriptions' | 'budgets';
 type ModalKind = 'transaction' | 'subscription' | null;
 type TransactionType = 'income' | 'expense';
 type BillingCycle = 'month' | 'year';
+type Theme = 'light' | 'dark';
 
 type Transaction = {
   id: number;
@@ -117,6 +118,18 @@ function LanguageSwitch({ mobile = false }: { mobile?: boolean }) {
   );
 }
 
+function ThemeControl({ theme, onToggle, className = '' }: { theme: Theme | null; onToggle: () => void; className?: string }) {
+  const { c } = useI18n();
+  const isDark = theme === 'dark';
+  const label = isDark ? c.theme.useLight : c.theme.useDark;
+  return (
+    <button className={`icon-control theme-control ${className}`.trim()} type="button" onClick={onToggle} aria-label={label} title={label} aria-pressed={isDark}>
+      <Moon className="theme-icon theme-icon-moon" size={20} weight="bold" aria-hidden="true" />
+      <Sun className="theme-icon theme-icon-sun" size={20} weight="bold" aria-hidden="true" />
+    </button>
+  );
+}
+
 export default function FinanceApp() {
   return <I18nProvider><AppContent /></I18nProvider>;
 }
@@ -132,6 +145,7 @@ function AppContent() {
   const [income, setIncome] = useState(53400000);
   const [expense, setExpense] = useState(24720000);
   const [toast, setToast] = useState<string | null>(null);
+  const [theme, setTheme] = useState<Theme | null>(null);
   const modalOpener = useRef<HTMLElement | null>(null);
   const activeSubscriptions = useMemo(() => subscriptions.filter((item) => item.status !== 'paused'), [subscriptions]);
   const subscriptionMonthlyTotal = useMemo(() => Math.round(activeSubscriptions.reduce((sum, item) => sum + monthlyCost(item), 0)), [activeSubscriptions]);
@@ -141,6 +155,13 @@ function AppContent() {
     const timer = window.setTimeout(() => setToast(null), 2800);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     if (!modal) return;
@@ -157,6 +178,14 @@ function AppContent() {
   function closeModal() { setModal(null); window.requestAnimationFrame(() => modalOpener.current?.focus()); }
   function announceFeature(feature: string) { setToast(t('toast.comingSoon', { feature })); }
   function navigate(nextView: View) { setView(nextView); window.scrollTo({ top: 0 }); }
+  function toggleTheme() {
+    const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    const next: Theme = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    document.documentElement.style.colorScheme = next;
+    try { window.localStorage.setItem('tally-theme', next); } catch { /* Keep the in-session theme if storage is unavailable. */ }
+    setTheme(next);
+  }
 
   function addTransaction(input: NewTransaction) {
     const signedAmount = input.type === 'income' ? input.amount : -input.amount;
@@ -222,7 +251,8 @@ function AppContent() {
           </button>
           <div className="appbar-actions">
             <LanguageSwitch mobile />
-            <button className="icon-control" type="button" onClick={() => announceFeature(c.features.notifications)} aria-label={t('a11y.comingSoon', { feature: c.features.notifications })}><Bell size={20} weight="bold" aria-hidden="true" /></button>
+            <ThemeControl theme={theme} onToggle={toggleTheme} />
+            <button className="icon-control notification-control" type="button" onClick={() => announceFeature(c.features.notifications)} aria-label={t('a11y.comingSoon', { feature: c.features.notifications })}><Bell size={20} weight="bold" aria-hidden="true" /></button>
             <span className="avatar" aria-label={t('a11y.account', { name: 'An Nhiên' })}>AN</span>
           </div>
         </header>
@@ -235,7 +265,8 @@ function AppContent() {
           </div>
           <div className="header-actions">
             <span className="demo-badge">{c.common.demoData}</span><LanguageSwitch />
-            <button className="icon-control desktop-only" type="button" onClick={() => announceFeature(c.features.notifications)} aria-label={t('a11y.comingSoon', { feature: c.features.notifications })}><Bell size={20} weight="bold" aria-hidden="true" /></button>
+            <ThemeControl theme={theme} onToggle={toggleTheme} className="desktop-only" />
+            <button className="icon-control notification-control desktop-only" type="button" onClick={() => announceFeature(c.features.notifications)} aria-label={t('a11y.comingSoon', { feature: c.features.notifications })}><Bell size={20} weight="bold" aria-hidden="true" /></button>
             <button className="primary-action desktop-only" type="button" onClick={() => openModal(view === 'subscriptions' ? 'subscription' : 'transaction')}><Plus size={19} weight="bold" aria-hidden="true" />{view === 'subscriptions' ? c.actions.addSubscriptionShort : c.actions.addTransaction}</button>
           </div>
         </header>
@@ -265,7 +296,7 @@ function Overview({ balance, income, expense, transactions, subscriptions, subsc
   balance: number; income: number; expense: number; transactions: Transaction[]; subscriptions: Subscription[];
   subscriptionMonthlyTotal: number; onNavigate: (view: View) => void; onAddTransaction: () => void;
 }) {
-  const { c, formatCurrency, formatPercent, plural, t } = useI18n();
+  const { c, formatCurrency, formatPercent, t } = useI18n();
   const [period, setPeriod] = useState('30d');
   const upcoming = [...subscriptions].sort((a, b) => a.nextRenewal.localeCompare(b.nextRenewal)).slice(0, 3);
   return (
@@ -280,7 +311,7 @@ function Overview({ balance, income, expense, transactions, subscriptions, subsc
             <div className="summary-metric"><span className="metric-icon negative"><ArrowDownRight size={18} weight="bold" aria-hidden="true" /></span><span><small>{c.overview.spendingThisMonth}</small><strong>{formatCurrency(expense)}</strong><em className="negative-copy">{t('overview.incomeShare', { percent: formatPercent(income > 0 ? expense / income : 0) })}</em></span></div>
           </div>
         </section>
-        {upcoming[0] && <button className="mobile-next-renewal surface-raised" type="button" onClick={() => onNavigate('subscriptions')}><span className={`service-mark ${upcoming[0].tone}`}>{upcoming[0].monogram}</span><span><small>{c.overview.nextRenewal}</small><strong>{upcoming[0].name}</strong></span><span className="renewal-amount"><strong>{formatCurrency(upcoming[0].amount)}</strong><small>{plural('overview.daysLeft', daysUntil(upcoming[0].nextRenewal))}</small></span><CaretRight size={18} weight="bold" aria-hidden="true" /></button>}
+        <RenewalSchedule subscriptions={upcoming} onOpen={() => onNavigate('subscriptions')} className="mobile-renewal-schedule surface-raised" />
         <CashflowPanel period={period} onPeriodChange={setPeriod} />
         <section className="activity-panel surface-raised">
           <div className="section-heading"><h2>{c.overview.recentTransactions}</h2><button type="button" className="quiet-link" onClick={() => onNavigate('transactions')}>{c.overview.viewAll} <CaretRight size={14} weight="bold" aria-hidden="true" /></button></div>
@@ -290,6 +321,31 @@ function Overview({ balance, income, expense, transactions, subscriptions, subsc
       </div>
       <SubscriptionOverview subscriptions={upcoming} monthlyTotal={subscriptionMonthlyTotal} onOpen={() => onNavigate('subscriptions')} />
     </div>
+  );
+}
+
+function RenewalSchedule({ subscriptions, onOpen, className = '' }: { subscriptions: Subscription[]; onOpen: () => void; className?: string }) {
+  const { c, formatCurrency, formatDate, plural } = useI18n();
+  return (
+    <section className={`renewal-schedule ${className}`.trim()} aria-label={c.renewals.scheduleAria}>
+      <div className="renewal-schedule-summary">
+        <span className="renewal-count-token" aria-hidden="true">{subscriptions.length}</span>
+        <span className="renewal-summary-copy"><strong>{c.renewals.scheduleTitle}</strong><small>{plural('renewals.upcomingCount', subscriptions.length)}</small></span>
+      </div>
+      {subscriptions.length > 0 ? (
+        <ol className="renewal-timeline">
+          {subscriptions.map((item) => (
+            <li key={item.id}>
+              <button className="renewal-event" type="button" onClick={onOpen}>
+                <span className={`service-mark ${item.tone}`} aria-hidden="true">{item.monogram}</span>
+                <span className="renewal-event-copy"><strong>{item.name}</strong><small><time dateTime={item.nextRenewal}>{formatDate(item.nextRenewal)}</time><span aria-hidden="true"> · </span>{plural('renewals.daysAway', daysUntil(item.nextRenewal))}</small></span>
+                <strong className="renewal-event-amount">{formatCurrency(item.amount)}</strong>
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : <p className="renewal-empty">{c.renewals.emptySchedule}</p>}
+    </section>
   );
 }
 
@@ -322,12 +378,11 @@ function CashflowPanel({ period, onPeriodChange }: { period: string; onPeriodCha
 }
 
 function SubscriptionOverview({ subscriptions, monthlyTotal, onOpen }: { subscriptions: Subscription[]; monthlyTotal: number; onOpen: () => void }) {
-  const { c, formatCurrency, formatDate, plural } = useI18n();
+  const { c, formatCurrency } = useI18n();
   return (
     <aside className="subscription-overview surface-raised" aria-labelledby="renewal-title">
       <div className="section-heading"><h2 id="renewal-title">{c.renewals.title}</h2><button type="button" className="icon-plain" onClick={onOpen} aria-label={c.renewals.openAria}><DotsThree size={22} weight="bold" aria-hidden="true" /></button></div>
-      <div className="renewal-visual"><div className="renewal-arc" aria-hidden="true"><span className="arc-marker one" /><span className="arc-marker two" /><span className="arc-marker three" /></div><div className="renewal-center"><strong>{subscriptions.length}</strong><span>{plural('renewals.upcomingCount', subscriptions.length)}</span></div><div className="renewal-dates">{subscriptions.map((item) => <span key={item.id}><i /> <strong>{formatDate(item.nextRenewal)}</strong><small>{plural('renewals.daysAway', daysUntil(item.nextRenewal))}</small></span>)}</div></div>
-      <div className="subscription-preview-list">{subscriptions.map((item) => <button className="subscription-preview-row" key={item.id} type="button" onClick={onOpen}><span className={`service-mark ${item.tone}`}>{item.monogram}</span><span><strong>{item.name}</strong><small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small></span><strong>{formatCurrency(item.amount)}</strong><CaretRight size={17} weight="bold" aria-hidden="true" /></button>)}</div>
+      <RenewalSchedule subscriptions={subscriptions} onOpen={onOpen} />
       <button className="subscription-total" type="button" onClick={onOpen}><span>{c.renewals.totalPerMonth}</span><strong>{formatCurrency(monthlyTotal)}</strong></button><p className="demo-note">{c.common.demoData}</p>
     </aside>
   );
