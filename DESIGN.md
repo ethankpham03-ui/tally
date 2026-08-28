@@ -6,7 +6,7 @@ colors:
   accent-strong: "#0c5ee5"
   accent-soft: "#dbe8ff"
   canvas: "#f0f1f4"
-  surface: "#f8f9fb"
+  surface: "#fbfbfd"
   surface-solid: "#ffffff"
   surface-inset: "#eceff3"
   ink: "#111b31"

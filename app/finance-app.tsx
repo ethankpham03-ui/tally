@@ -204,10 +204,10 @@ function AppContent() {
     <main className="app-frame">
       <aside className="desktop-sidebar" aria-label={c.nav.mainAria}>
         <button className="brand" type="button" onClick={() => navigate('overview')} aria-label={t('nav.homeAria', { appName: APP_NAME })}>
-          <span className="brand-mark" aria-hidden="true"><Image src="/tally-icon.png" alt="" width={48} height={48} priority /></span><span>{APP_NAME}</span>
+          <span className="brand-mark" aria-hidden="true"><Image src="/tally-icon.png" alt="" width={84} height={84} sizes="42px" quality={100} priority /></span><span>{APP_NAME}</span>
         </button>
         <nav className="desktop-nav">
-          {navItems.map((item) => { const Icon = item.icon; return <button className={`nav-button ${view === item.id ? 'is-active' : ''}`} key={item.id} type="button" onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><Icon size={21} weight={view === item.id ? 'fill' : 'bold'} aria-hidden="true" /><span>{c.nav[item.id]}</span></button>; })}
+          {navItems.map((item) => { const Icon = item.icon; return <button className={`nav-button ${view === item.id ? 'is-active' : ''}`} key={item.id} type="button" onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><Icon size={21} weight="bold" aria-hidden="true" /><span>{c.nav[item.id]}</span></button>; })}
         </nav>
         <div className="sidebar-footer">
           <button className="utility-button" type="button" onClick={resetDemo} aria-label={c.a11y.restoreDemo}><ArrowCounterClockwise size={20} weight="bold" aria-hidden="true" /></button>
@@ -218,7 +218,7 @@ function AppContent() {
       <section className="workspace">
         <header className="mobile-appbar">
           <button className="mobile-brand" type="button" onClick={() => navigate('overview')} aria-label={t('nav.homeAria', { appName: APP_NAME })}>
-            <span className="brand-mark small" aria-hidden="true"><Image src="/tally-icon.png" alt="" width={42} height={42} priority /></span><span>{APP_NAME}</span>
+            <span className="brand-mark small" aria-hidden="true"><Image src="/tally-icon.png" alt="" width={72} height={72} sizes="36px" quality={100} priority /></span><span>{APP_NAME}</span>
           </button>
           <div className="appbar-actions">
             <LanguageSwitch mobile />
@@ -249,9 +249,9 @@ function AppContent() {
       </section>
 
       <nav className="mobile-bottom-nav" aria-label={c.nav.mobileAria}>
-        {navItems.slice(0, 2).map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><Icon size={21} weight={view === item.id ? 'fill' : 'bold'} aria-hidden="true" /><span>{c.nav[item.id]}</span></button>; })}
+        {navItems.slice(0, 2).map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><Icon size={21} weight="bold" aria-hidden="true" /><span>{c.nav[item.id]}</span></button>; })}
         <button className="mobile-add" type="button" onClick={() => openModal('transaction')} aria-label={c.actions.addTransaction}><Plus size={25} weight="bold" aria-hidden="true" /></button>
-        {navItems.slice(2).map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><Icon size={21} weight={view === item.id ? 'fill' : 'bold'} aria-hidden="true" /><span>{c.nav[item.id]}</span></button>; })}
+        {navItems.slice(2).map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><Icon size={21} weight="bold" aria-hidden="true" /><span>{c.nav[item.id]}</span></button>; })}
       </nav>
 
       {modal === 'transaction' && <TransactionSheet onClose={closeModal} onSave={addTransaction} />}

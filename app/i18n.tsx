@@ -235,7 +235,7 @@ const enCatalog = {
     title: '{appName} | Personal finance manager',
     description: 'Track income, expenses, budgets, and recurring subscriptions in one place.',
     socialTitle: '{appName} | Clearer cash flow',
-    socialAlt: '{appName} — Clearer cash flow. Lighter living.',
+    socialAlt: '{appName} - Clearer cash flow. Lighter living.',
   },
 } as const;
 
@@ -456,7 +456,7 @@ const viCatalog = {
     title: '{appName} | Quản lý tài chính cá nhân',
     description: 'Theo dõi thu chi, ngân sách và các gói đăng ký định kỳ trong cùng một nơi.',
     socialTitle: '{appName} | Dòng tiền rõ ràng',
-    socialAlt: '{appName} — Dòng tiền rõ ràng. Cuộc sống nhẹ hơn.',
+    socialAlt: '{appName} - Dòng tiền rõ ràng. Cuộc sống nhẹ hơn.',
   },
 } as const satisfies TranslationCatalog;
 
