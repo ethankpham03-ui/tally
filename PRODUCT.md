@@ -24,7 +24,7 @@ Kết nối quản lý thu chi với quản lý subscription: một kỳ gia h�
 - Người dùng kiểm tra tổng quan tài chính nhiều lần trong tháng.
 - Người dùng ghi giao dịch khi phát sinh hoặc bổ sung sau.
 - Người dùng theo dõi ngày gia hạn, chu kỳ thanh toán, giá và trạng thái của các dịch vụ trả phí.
-- Dữ liệu thật, đăng nhập và lưu trữ cloud chưa được quyết định; bản đầu dùng dữ liệu minh họa rõ ràng để chứng minh trải nghiệm.
+- Tally là ứng dụng local-only: không đăng nhập, không hồ sơ tài khoản và không đồng bộ cloud. Bản đầu dùng dữ liệu minh họa trong phiên để chứng minh trải nghiệm.
 
 ## Capabilities and Constraints
 
@@ -36,6 +36,7 @@ Kết nối quản lý thu chi với quản lý subscription: một kỳ gia h�
 - Hỗ trợ đầy đủ tiếng Anh và tiếng Việt; tiếng Anh là ngôn ngữ mặc định.
 - Giao diện responsive cho desktop và mobile web.
 - Mobile web là bề mặt sử dụng chính: luồng xem số dư, thêm giao dịch và kiểm tra kỳ gia hạn phải tối ưu cho chiều rộng 360-430px và thao tác một tay.
+- App shell không hiển thị avatar hoặc entry point tài khoản vì sản phẩm không có identity layer.
 
 ## Brand Commitments
 

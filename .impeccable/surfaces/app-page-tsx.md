@@ -59,7 +59,7 @@ An individual checks available balance, records a transaction, and sees which pa
 ## Constraints and open decisions
 
 - Demo data is explicitly labeled; no commercial claims or real-user evidence is fabricated.
-- The first release uses in-memory demo state. Authentication and durable cloud persistence remain open product decisions.
+- The first release is explicitly local-only and uses in-memory demo state. It has no authentication, account profile, or cloud persistence; the app shell must not imply otherwise with an avatar or account affordance.
 - Neumorphic depth may not carry meaning by itself; text, icons and focus outlines must remain legible in bright mobile conditions.
 - `Tally` is the confirmed product name and is never localized.
 - English (`en`) is the default interface; Vietnamese (`vi`) must provide complete copy and equivalent accessible names without changing the information architecture.

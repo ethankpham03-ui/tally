@@ -1403,7 +1403,6 @@ select {
   .mobile-language-switch { display: inline-grid; }
   .mobile-appbar .language-switch { margin-left: 2px; }
   .mobile-appbar .icon-control { width: 44px; height: 44px; background: var(--control-gradient); box-shadow: var(--shadow-micro); }
-  .avatar { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; color: var(--accent-strong); background: var(--accent-soft); box-shadow: var(--shadow-micro); font-size: 11px; font-weight: 760; }
 
   .page-header {
     min-height: auto;

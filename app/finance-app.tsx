@@ -258,7 +258,6 @@ function AppContent() {
             <LanguageSwitch mobile />
             <ThemeControl theme={theme} onToggle={toggleTheme} />
             <button className="icon-control notification-control" type="button" onClick={() => announceFeature(c.features.notifications)} aria-label={t('a11y.comingSoon', { feature: c.features.notifications })}><Bell size={20} weight="bold" aria-hidden="true" /></button>
-            <span className="avatar" aria-label={t('a11y.account', { name: 'An Nhiên' })}>AN</span>
           </div>
         </header>
 

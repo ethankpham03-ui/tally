@@ -64,7 +64,6 @@ const enCatalog = {
   a11y: {
     restoreDemo: 'Restore demo data',
     comingSoon: '{feature}, coming soon',
-    account: "{name}'s account",
   },
   header: {
     greeting: 'Good morning, {name}',
@@ -292,7 +291,6 @@ const viCatalog = {
   a11y: {
     restoreDemo: 'Khôi phục dữ liệu minh họa',
     comingSoon: '{feature}, sắp ra mắt',
-    account: 'Tài khoản của {name}',
   },
   header: {
     greeting: 'Chào buổi sáng, {name}',

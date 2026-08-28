@@ -146,6 +146,7 @@ The system favors immediate financial legibility, explicit states, generous brea
 - **Icon color:** The icon's baked-in teal wave is a locked brand signature. Cobalt remains the interaction accent; do not sample extra interface colors from the icon.
 - **Language model:** English (`en`) is the default locale and Vietnamese (`vi`) is a complete alternate locale. A language switch changes the full interface instead of showing both languages together.
 - **Locale behavior:** Keep information hierarchy, control dimensions, and meaning stable across locales; update document language, accessible names, date labels, and copy as one coherent locale state.
+- **Identity model:** Tally is local-only and has no sign-in, account profile, or cloud identity. Do not place avatars or account affordances in the app shell.
 
 ## Colors
 
