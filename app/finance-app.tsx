@@ -8,8 +8,8 @@ import {
   CalendarBlank,
   CaretRight,
   ChartDonut,
-  Check,
   CheckCircle,
+  CircleNotch,
   CreditCard,
   DotsThree,
   DownloadSimple,
@@ -35,10 +35,21 @@ import {
 } from '@phosphor-icons/react';
 import Image from 'next/image';
 import {
+  AnimatePresence,
+  LazyMotion,
+  MotionConfig,
+  domAnimation,
+  useReducedMotion,
+  type Variants,
+} from 'motion/react';
+import * as m from 'motion/react-m';
+import {
   type ChangeEvent,
   type FormEvent,
   type ReactNode,
+  useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -69,8 +80,8 @@ import {
   type Transaction,
 } from './finance-domain';
 import { APP_NAME, I18nProvider, useI18n, type Locale } from './i18n';
+import { VIEW_ORDER, viewDirection as getViewDirection, viewFromHashValue, type View } from './navigation';
 
-type View = 'overview' | 'transactions' | 'subscriptions' | 'budgets';
 type Theme = 'light' | 'dark';
 type TransactionType = 'income' | 'expense';
 type StorageStatus = 'loading' | 'saving' | 'saved' | 'error' | 'future';
@@ -104,12 +115,27 @@ const renewalOrbitPoints: Record<number, ReadonlyArray<{ x: number; y: number }>
   3: [{ x: 112, y: 27 }, { x: 142, y: 80 }, { x: 112, y: 133 }],
 };
 
-const navItems: Array<{ id: View; icon: typeof House }> = [
-  { id: 'overview', icon: House },
-  { id: 'transactions', icon: ArrowsDownUp },
-  { id: 'subscriptions', icon: CreditCard },
-  { id: 'budgets', icon: ChartDonut },
-];
+const navIcons: Record<View, typeof House> = {
+  overview: House,
+  transactions: ArrowsDownUp,
+  subscriptions: CreditCard,
+  budgets: ChartDonut,
+};
+const navItems = VIEW_ORDER.map((id) => ({ id, icon: navIcons[id] }));
+
+const viewMotionVariants: Variants = {
+  enter: (direction: number) => ({ opacity: 0.72, x: direction * 14 }),
+  center: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] },
+  },
+  exit: (direction: number) => ({
+    opacity: 0,
+    x: direction * -8,
+    transition: { duration: 0.12, ease: [0.4, 0, 1, 1] },
+  }),
+};
 
 const serviceTones: Subscription['tone'][] = ['blue', 'green', 'graphite', 'violet', 'red'];
 
@@ -125,15 +151,86 @@ function dateReference(value: string) {
   return new Date(`${value}T12:00:00`);
 }
 
+function moneyDensityClass(label: string) {
+  return label.length >= 17 ? 'is-compact-money' : '';
+}
+
 function viewFromHash(): View | null {
   if (typeof window === 'undefined') return null;
-  const value = window.location.hash.replace('#', '');
-  return navItems.some((item) => item.id === value) ? (value as View) : null;
+  return viewFromHashValue(window.location.hash);
+}
+
+function shouldMoveFocusAfterViewChange() {
+  const outgoingView = document.querySelector('.view-motion-layer');
+  const activeElement = document.activeElement;
+  return activeElement === document.body || Boolean(activeElement && outgoingView?.contains(activeElement));
 }
 
 function PageIcon({ view }: { view: View }) {
   const Icon = (navItems.find((item) => item.id === view) ?? navItems[0]).icon;
-  return <Icon size={20} weight="bold" aria-hidden="true" />;
+  return <Icon size={20} weight="regular" aria-hidden="true" />;
+}
+
+function AppLoadingShell({ label }: { label: string }) {
+  return (
+    <main className="app-frame app-loading-shell" aria-busy="true">
+      <aside className="desktop-sidebar loading-sidebar" aria-hidden="true">
+        <div className="brand loading-brand">
+          <span className="brand-mark"><Image src="/tally-icon-192.png" alt="" width={84} height={84} sizes="42px" quality={100} priority /></span>
+          <span>{APP_NAME}</span>
+        </div>
+        <div className="loading-nav-stack">
+          {navItems.map((item) => <span className="loading-nav-row" key={item.id}><i className="loading-skeleton-dot" /><i className="loading-skeleton-line is-nav" /></span>)}
+        </div>
+      </aside>
+
+      <section className="workspace">
+        <header className="mobile-appbar loading-mobile-appbar" aria-hidden="true">
+          <span className="mobile-brand"><span className="brand-mark small"><Image src="/tally-icon-192.png" alt="" width={72} height={72} sizes="36px" quality={100} priority /></span><span>{APP_NAME}</span></span>
+          <span className="loading-appbar-actions"><i className="loading-skeleton-dot is-control" /><i className="loading-skeleton-dot is-control" /><i className="loading-skeleton-dot is-control" /></span>
+        </header>
+
+        <header className="page-header loading-page-header">
+          <div className="loading-heading-copy" aria-hidden="true">
+            <span className="loading-skeleton-line is-heading" />
+            <span className="loading-skeleton-line is-context" />
+          </div>
+          <div className="loading-status" role="status" aria-live="polite" aria-atomic="true">
+            <CircleNotch className="loading-spinner" size={18} weight="bold" aria-hidden="true" />
+            <span>{label}</span>
+          </div>
+        </header>
+
+        <div className="loading-overview" aria-hidden="true">
+          <div className="loading-primary">
+            <section className="surface-raised loading-panel loading-balance-panel">
+              <span className="loading-skeleton-line is-label" />
+              <span className="loading-skeleton-line is-balance" />
+              <div className="loading-summary-grid"><span /><span /></div>
+            </section>
+            <section className="surface-raised loading-panel loading-renewal-panel loading-renewal-mobile">
+              <span className="loading-skeleton-line is-title" />
+              <div className="loading-renewal-compact"><span className="loading-orbit-placeholder" /><div className="loading-list-rows is-compact"><span /><span /><span /></div></div>
+            </section>
+            <section className="surface-raised loading-panel loading-chart-panel">
+              <span className="loading-skeleton-line is-title" />
+              <div className="loading-chart-bars">{[42, 68, 54, 78, 48, 64, 72, 44].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}</div>
+            </section>
+            <section className="surface-raised loading-panel loading-list-panel">
+              <span className="loading-skeleton-line is-title" />
+              <div className="loading-list-rows"><span /><span /><span /></div>
+            </section>
+          </div>
+          <aside className="surface-raised loading-panel loading-renewal-panel loading-renewal-desktop">
+            <span className="loading-skeleton-line is-title" />
+            <span className="loading-orbit-placeholder" />
+            <div className="loading-list-rows is-compact"><span /><span /><span /></div>
+          </aside>
+        </div>
+      </section>
+      <div className="mobile-bottom-nav loading-bottom-nav" aria-hidden="true"><span /><span /><span className="is-primary" /><span /><span /></div>
+    </main>
+  );
 }
 
 function LanguageSwitch({ mobile = false }: { mobile?: boolean }) {
@@ -183,22 +280,45 @@ function ThemeControl({ theme, onToggle, className = '' }: { theme: Theme | null
 }
 
 export default function FinanceApp() {
-  return <I18nProvider><AppContent /></I18nProvider>;
+  return (
+    <I18nProvider>
+      <MotionConfig reducedMotion="user">
+        <LazyMotion features={domAnimation} strict>
+          <AppContent />
+        </LazyMotion>
+      </MotionConfig>
+    </I18nProvider>
+  );
 }
 
 function AppContent() {
-  const { c, t } = useI18n();
+  const { c, t, isLocaleHydrated } = useI18n();
+  const shouldReduceMotion = useReducedMotion();
   const [today, setToday] = useState(localTodayIso);
   const [data, setData] = useState<FinanceData>(() => createDemoData());
   const [view, setView] = useState<View>('overview');
+  const [viewDirection, setViewDirection] = useState<1 | -1>(1);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [theme, setTheme] = useState<Theme | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [storageStatus, setStorageStatus] = useState<StorageStatus>('loading');
   const [storageWarning, setStorageWarning] = useState<StorageWarning>(null);
+  const activeViewRef = useRef<View>('overview');
   const dialogOpener = useRef<HTMLElement | null>(null);
+  const pendingViewFocusRef = useRef(false);
+  const lastPersistedPayloadRef = useRef<string | null>(null);
   const toastSequence = useRef(0);
+
+  const commitView = useCallback((nextView: View) => {
+    const currentView = activeViewRef.current;
+    if (nextView === currentView) return false;
+    const direction = getViewDirection(currentView, nextView);
+    activeViewRef.current = nextView;
+    setViewDirection(direction);
+    setView(nextView);
+    return true;
+  }, []);
 
   const transactions = useMemo(
     () => [...data.transactions].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
@@ -212,8 +332,9 @@ function AppContent() {
   const summary = useMemo(() => deriveFinanceSummary(data, reference), [data, reference]);
   const budgetUsage = useMemo(() => deriveBudgetUsage(data, reference), [data, reference]);
   const subscriptionTotals = useMemo(() => deriveSubscriptionTotals(activeSubscriptions), [activeSubscriptions]);
+  const appReady = hydrated && isLocaleHydrated;
   const persistenceBlocked = storageStatus === 'future';
-  const mutationsDisabled = !hydrated || persistenceBlocked;
+  const mutationsDisabled = !appReady || persistenceBlocked;
 
   useEffect(() => {
     const timer = window.setInterval(() => setToday(localTodayIso()), 60_000);
@@ -223,7 +344,10 @@ function AppContent() {
   useEffect(() => {
     const syncView = () => {
       const next = viewFromHash();
-      if (next) setView(next);
+      if (!next) return;
+      const shouldMoveFocus = shouldMoveFocusAfterViewChange();
+      const changed = commitView(next);
+      if (changed) pendingViewFocusRef.current = shouldMoveFocus;
     };
     syncView();
     window.addEventListener('popstate', syncView);
@@ -232,7 +356,7 @@ function AppContent() {
       window.removeEventListener('popstate', syncView);
       window.removeEventListener('hashchange', syncView);
     };
-  }, []);
+  }, [commitView]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -242,6 +366,7 @@ function AppContent() {
         const parsed = parseFinanceData(raw);
         if (parsed.status === 'ok') {
           nextData = parsed.data;
+          lastPersistedPayloadRef.current = serializeFinanceData(parsed.data);
           setStorageStatus('saved');
         } else if (parsed.status === 'future-version') {
           setStorageStatus('future');
@@ -254,6 +379,7 @@ function AppContent() {
           setStorageStatus('saving');
         }
       } catch {
+        lastPersistedPayloadRef.current = serializeFinanceData(nextData);
         setStorageStatus('error');
         setStorageWarning('error');
       }
@@ -265,10 +391,13 @@ function AppContent() {
 
   useEffect(() => {
     if (!hydrated || persistenceBlocked) return;
+    const payload = serializeFinanceData(data);
+    if (payload === lastPersistedPayloadRef.current) return;
     const statusTimer = window.setTimeout(() => setStorageStatus('saving'), 0);
     const timer = window.setTimeout(() => {
       try {
-        window.localStorage.setItem(FINANCE_STORAGE_KEY, serializeFinanceData(data));
+        window.localStorage.setItem(FINANCE_STORAGE_KEY, payload);
+        lastPersistedPayloadRef.current = payload;
         setStorageStatus('saved');
       } catch {
         setStorageStatus('error');
@@ -285,6 +414,7 @@ function AppContent() {
       if (event.key !== FINANCE_STORAGE_KEY || !event.newValue) return;
       const parsed = parseFinanceData(event.newValue);
       if (parsed.status === 'ok') {
+        lastPersistedPayloadRef.current = serializeFinanceData(parsed.data);
         setData(parsed.data);
         setStorageStatus('saved');
       }
@@ -301,21 +431,9 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    if (!dialog) return;
-    document.body.classList.add('is-sheet-open');
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeDialog();
-    };
-    window.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.body.classList.remove('is-sheet-open');
-      window.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [dialog]);
-
-  useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), toast.undo ? 6200 : 3200);
+    if (toast.undo) return;
+    const timer = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
@@ -345,13 +463,32 @@ function AppContent() {
 
   function closeDialog() {
     setDialog(null);
-    window.requestAnimationFrame(() => dialogOpener.current?.focus());
+  }
+
+  function restoreDialogFocus() {
+    const opener = dialogOpener.current;
+    dialogOpener.current = null;
+    if (!opener?.isConnected) return;
+    window.requestAnimationFrame(() => opener.focus());
   }
 
   function navigate(nextView: View) {
-    setView(nextView);
-    window.history.pushState(null, '', `#${nextView}`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const shouldMoveFocus = shouldMoveFocusAfterViewChange();
+    const changed = commitView(nextView);
+    if (changed) {
+      pendingViewFocusRef.current = shouldMoveFocus;
+      window.history.pushState(null, '', `#${nextView}`);
+    }
+    window.scrollTo({ top: 0, behavior: shouldReduceMotion ? 'auto' : 'smooth' });
+  }
+
+  function focusPendingView() {
+    if (!pendingViewFocusRef.current) return;
+    pendingViewFocusRef.current = false;
+    window.requestAnimationFrame(() => {
+      const pageTitle = Array.from(document.querySelectorAll<HTMLElement>('[data-page-focus]')).find((element) => element.offsetParent !== null);
+      pageTitle?.focus();
+    });
   }
 
   function toggleTheme() {
@@ -470,18 +607,24 @@ function AppContent() {
     setData({ ...nextData, updatedAt: new Date().toISOString() });
     setStorageWarning(null);
     setStorageStatus('saving');
-    setView('overview');
+    commitView('overview');
     window.history.replaceState(null, '', '#overview');
     showToast(message);
   }
 
+  if (!appReady) return <AppLoadingShell label={c.storage.loading} />;
+
   const primaryDialogKind = view === 'subscriptions' ? 'subscription' : view === 'budgets' ? 'budget' : 'transaction';
   const primaryLabel = view === 'subscriptions' ? c.actions.addSubscriptionShort : view === 'budgets' ? c.actions.addBudget : c.actions.addTransaction;
-  const storageLabel = storageStatus === 'saved'
-    ? c.storage.saved
-    : storageStatus === 'saving' || storageStatus === 'loading'
+  const storageLabel = storageStatus === 'loading'
+    ? c.storage.loading
+    : storageStatus === 'saving'
       ? c.storage.saving
-      : c.storage.error;
+      : storageStatus === 'saved'
+        ? c.storage.saved
+        : storageStatus === 'future'
+          ? c.storage.readOnly
+          : c.storage.error;
   const storageWarningCopy = storageWarning === 'corrupt'
     ? c.storage.corruptWarning
     : storageWarning === 'future'
@@ -489,12 +632,36 @@ function AppContent() {
       : storageWarning === 'error'
         ? c.storage.error
         : null;
+  const activeDialog = dialog?.kind === 'transaction'
+    ? <TransactionSheet key={`transaction-${dialog.item?.id ?? 'new'}`} initial={dialog.item} today={today} onClose={closeDialog} onSave={saveTransaction} />
+    : dialog?.kind === 'subscription'
+      ? <SubscriptionSheet key={`subscription-${dialog.item?.id ?? 'new'}`} initial={dialog.item} today={today} onClose={closeDialog} onSave={saveSubscription} />
+      : dialog?.kind === 'budget'
+        ? <BudgetSheet key={`budget-${dialog.item?.id ?? 'new'}`} initial={dialog.item} budgets={data.budgets} onClose={closeDialog} onSave={saveBudget} />
+        : dialog?.kind === 'settings'
+          ? (
+              <SettingsSheet
+                key="settings"
+                data={data}
+                storageStatus={storageStatus}
+                onClose={closeDialog}
+                onOpeningBalance={(openingBalance) => {
+                  updateData((current) => ({ ...current, openingBalance }));
+                  showToast(c.toast.openingBalanceUpdated);
+                }}
+                onRestoreSample={() => replaceAllData(createDemoData(), c.toast.demoRestored)}
+                onClear={() => replaceAllData(createEmptyData(), c.toast.dataCleared)}
+                onImport={(nextData) => replaceAllData(nextData, c.toast.dataImported)}
+                onNotify={showToast}
+              />
+            )
+          : null;
 
   return (
     <main className="app-frame" aria-busy={!hydrated}>
       <aside className="desktop-sidebar" aria-label={c.nav.mainAria}>
         <button className="brand" type="button" onClick={() => navigate('overview')} aria-label={t('nav.homeAria', { appName: APP_NAME })}>
-          <span className="brand-mark" aria-hidden="true"><Image src="/tally-icon.png" alt="" width={84} height={84} sizes="42px" quality={100} priority /></span>
+          <span className="brand-mark" aria-hidden="true"><Image src="/tally-icon-192.png" alt="" width={84} height={84} sizes="42px" quality={100} priority /></span>
           <span>{APP_NAME}</span>
         </button>
         <nav className="desktop-nav">
@@ -502,7 +669,7 @@ function AppContent() {
             const Icon = item.icon;
             return (
               <button className={`nav-button ${view === item.id ? 'is-active' : ''}`} key={item.id} type="button" onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined} aria-label={c.nav[item.id]} title={c.nav[item.id]}>
-                <Icon size={21} weight="bold" aria-hidden="true" /><span>{c.nav[item.id]}</span>
+                <m.i className="nav-icon" aria-hidden="true" animate={{ opacity: view === item.id ? 1 : 0.76, scale: view === item.id ? 1 : 0.92 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18 }}><Icon size={21} weight={view === item.id ? 'fill' : 'regular'} aria-hidden="true" /></m.i><span>{c.nav[item.id]}</span>
               </button>
             );
           })}
@@ -517,7 +684,7 @@ function AppContent() {
       <section className="workspace">
         <header className="mobile-appbar">
           <button className="mobile-brand" type="button" onClick={() => navigate('overview')} aria-label={t('nav.homeAria', { appName: APP_NAME })}>
-            <span className="brand-mark small" aria-hidden="true"><Image src="/tally-icon.png" alt="" width={72} height={72} sizes="36px" quality={100} priority /></span><span>{APP_NAME}</span>
+            <span className="brand-mark small" aria-hidden="true"><Image src="/tally-icon-192.png" alt="" width={72} height={72} sizes="36px" quality={100} priority /></span><span>{APP_NAME}</span>
           </button>
           <div className="appbar-actions">
             <LanguageSwitch mobile />
@@ -528,8 +695,8 @@ function AppContent() {
 
         <header className="page-header">
           <div>
-            <h1 className="desktop-greeting">{c.header.greeting}</h1>
-            <div className="mobile-title-row"><PageIcon view={view} /><h1 id={`page-title-${view}`}>{c.nav[view]}</h1></div>
+            <h1 className="desktop-greeting" data-page-focus tabIndex={-1}>{c.header.greeting}</h1>
+            <div className="mobile-title-row"><PageIcon view={view} /><h1 id={`page-title-${view}`} data-page-focus tabIndex={-1}>{c.nav[view]}</h1></div>
             <p className="page-context">{c.header.context[view]}</p>
           </div>
           <div className="header-actions">
@@ -543,73 +710,66 @@ function AppContent() {
 
         {storageWarningCopy && <div className="storage-warning" role="status"><WarningCircle size={19} weight="fill" aria-hidden="true" /><span>{storageWarningCopy}</span><button type="button" onClick={() => setStorageWarning(null)} aria-label={c.common.close}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
 
-        <div className="view-stage" key={view} inert={mutationsDisabled ? true : undefined}>
-          {view === 'overview' && (
-            <Overview
-              summary={summary}
-              transactions={transactions}
-              subscriptions={activeSubscriptions}
-              subscriptionMonthlyTotal={subscriptionTotals.monthly}
-              today={today}
-              onNavigate={navigate}
-              onAddTransaction={() => openDialog({ kind: 'transaction' })}
-            />
-          )}
-          {view === 'transactions' && <TransactionsView transactions={transactions} onDelete={deleteTransaction} onEdit={(item) => openDialog({ kind: 'transaction', item })} onAdd={() => openDialog({ kind: 'transaction' })} />}
-          {view === 'subscriptions' && (
-            <SubscriptionsView
-              subscriptions={data.subscriptions}
-              totals={subscriptionTotals}
-              today={today}
-              onAdd={() => openDialog({ kind: 'subscription' })}
-              onEdit={(item) => openDialog({ kind: 'subscription', item })}
-              onToggle={toggleSubscription}
-              onDelete={deleteSubscription}
-              onRecordPayment={recordPayment}
-            />
-          )}
-          {view === 'budgets' && <BudgetsView usage={budgetUsage} today={today} onAdd={() => openDialog({ kind: 'budget' })} onEdit={(item) => openDialog({ kind: 'budget', item })} onDelete={deleteBudget} />}
+        <div className="view-stage" inert={mutationsDisabled ? true : undefined}>
+          <AnimatePresence initial={false} mode="wait" custom={viewDirection} onExitComplete={focusPendingView}>
+            <m.div className="view-motion-layer" key={view} custom={viewDirection} variants={viewMotionVariants} initial="enter" animate="center" exit="exit">
+              {view === 'overview' && (
+                <Overview
+                  summary={summary}
+                  transactions={transactions}
+                  subscriptions={activeSubscriptions}
+                  subscriptionMonthlyTotal={subscriptionTotals.monthly}
+                  today={today}
+                  onNavigate={navigate}
+                  onAddTransaction={() => openDialog({ kind: 'transaction' })}
+                />
+              )}
+              {view === 'transactions' && <TransactionsView transactions={transactions} onDelete={deleteTransaction} onEdit={(item) => openDialog({ kind: 'transaction', item })} onAdd={() => openDialog({ kind: 'transaction' })} />}
+              {view === 'subscriptions' && (
+                <SubscriptionsView
+                  subscriptions={data.subscriptions}
+                  totals={subscriptionTotals}
+                  today={today}
+                  onAdd={() => openDialog({ kind: 'subscription' })}
+                  onEdit={(item) => openDialog({ kind: 'subscription', item })}
+                  onToggle={toggleSubscription}
+                  onDelete={deleteSubscription}
+                  onRecordPayment={recordPayment}
+                />
+              )}
+              {view === 'budgets' && <BudgetsView usage={budgetUsage} today={today} onAdd={() => openDialog({ kind: 'budget' })} onEdit={(item) => openDialog({ kind: 'budget', item })} onDelete={deleteBudget} />}
+            </m.div>
+          </AnimatePresence>
         </div>
       </section>
 
       <nav className="mobile-bottom-nav" aria-label={c.nav.mobileAria}>
         {navItems.slice(0, 2).map((item) => {
           const Icon = item.icon;
-          return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><Icon size={21} weight="bold" aria-hidden="true" /><span>{c.nav[item.id]}</span></button>;
+          return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><m.i className="nav-icon" aria-hidden="true" animate={{ opacity: view === item.id ? 1 : 0.76, scale: view === item.id ? 1 : 0.92 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18 }}><Icon size={21} weight={view === item.id ? 'fill' : 'regular'} aria-hidden="true" /></m.i><span>{c.nav[item.id]}</span></button>;
         })}
         <button className="mobile-add" type="button" disabled={mutationsDisabled} onClick={() => openDialog({ kind: primaryDialogKind })} aria-label={primaryLabel}><Plus size={25} weight="bold" aria-hidden="true" /></button>
         {navItems.slice(2).map((item) => {
           const Icon = item.icon;
-          return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><Icon size={21} weight="bold" aria-hidden="true" /><span>{c.nav[item.id]}</span></button>;
+          return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><m.i className="nav-icon" aria-hidden="true" animate={{ opacity: view === item.id ? 1 : 0.76, scale: view === item.id ? 1 : 0.92 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18 }}><Icon size={21} weight={view === item.id ? 'fill' : 'regular'} aria-hidden="true" /></m.i><span>{c.nav[item.id]}</span></button>;
         })}
       </nav>
 
-      {dialog?.kind === 'transaction' && <TransactionSheet initial={dialog.item} today={today} onClose={closeDialog} onSave={saveTransaction} />}
-      {dialog?.kind === 'subscription' && <SubscriptionSheet initial={dialog.item} today={today} onClose={closeDialog} onSave={saveSubscription} />}
-      {dialog?.kind === 'budget' && <BudgetSheet initial={dialog.item} budgets={data.budgets} onClose={closeDialog} onSave={saveBudget} />}
-      {dialog?.kind === 'settings' && (
-        <SettingsSheet
-          data={data}
-          storageStatus={storageStatus}
-          onClose={closeDialog}
-          onOpeningBalance={(openingBalance) => {
-            updateData((current) => ({ ...current, openingBalance }));
-            showToast(c.toast.openingBalanceUpdated);
-          }}
-          onRestoreSample={() => replaceAllData(createDemoData(), c.toast.demoRestored)}
-          onClear={() => replaceAllData(createEmptyData(), c.toast.dataCleared)}
-          onImport={(nextData) => replaceAllData(nextData, c.toast.dataImported)}
-          onNotify={showToast}
-        />
-      )}
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{storageLabel}</span>
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{`${c.nav[view]}. ${c.header.context[view]}`}</span>
 
-      {toast && (
-        <div className="toast" key={toast.id} role="status" aria-live="polite">
-          <Check size={18} weight="bold" aria-hidden="true" />
-          <span>{toast.message}</span>
-          {toast.undo && <button type="button" onClick={() => { const undo = toast.undo; setToast(null); undo?.(); }}>{c.actions.undo}</button>}
-        </div>
-      )}
+      <AnimatePresence initial={false} onExitComplete={restoreDialogFocus}>{activeDialog}</AnimatePresence>
+
+      <AnimatePresence initial={false} mode="wait">
+        {toast && (
+          <m.div className="toast" key={toast.id} role="status" aria-live="polite" initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18, ease: [0.16, 1, 0.3, 1] }}>
+            <CheckCircle size={18} weight="fill" aria-hidden="true" />
+            <span>{toast.message}</span>
+            {toast.undo && <button className="toast-undo" type="button" onClick={() => { const undo = toast.undo; setToast(null); undo?.(); }}>{c.actions.undo}</button>}
+            {toast.undo && <button className="toast-dismiss" type="button" onClick={() => setToast(null)} aria-label={c.common.close}><X size={17} weight="bold" aria-hidden="true" /></button>}
+          </m.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
@@ -626,16 +786,19 @@ function Overview({ summary, transactions, subscriptions, subscriptionMonthlyTot
   const { c, formatCurrency, formatPercent, t } = useI18n();
   const [period, setPeriod] = useState<CashflowPeriod>('30d');
   const upcoming = [...subscriptions].sort((a, b) => a.nextRenewal.localeCompare(b.nextRenewal)).slice(0, 3);
+  const balanceLabel = formatCurrency(summary.availableBalance);
+  const incomeLabel = formatCurrency(summary.incomeThisMonth);
+  const expenseLabel = formatCurrency(summary.expenseThisMonth);
   return (
     <div className="overview-layout">
       <div className="overview-primary">
         <section className="balance-surface surface-raised" aria-labelledby="balance-title">
-          <div className="balance-topline"><span id="balance-title">{c.overview.availableBalance}</span><Wallet size={21} weight="bold" aria-hidden="true" /></div>
-          <strong className="balance-value">{formatCurrency(summary.availableBalance)}</strong>
+          <div className="balance-topline"><span id="balance-title">{c.overview.availableBalance}</span><Wallet size={21} weight="regular" aria-hidden="true" /></div>
+          <strong className={`balance-value ${moneyDensityClass(balanceLabel)}`.trim()} title={balanceLabel}>{balanceLabel}</strong>
           <div className="summary-pair">
-            <div className="summary-metric"><span className="metric-icon positive"><ArrowUpRight size={18} weight="bold" aria-hidden="true" /></span><span><small>{c.overview.incomeThisMonth}</small><strong>{formatCurrency(summary.incomeThisMonth)}</strong><em className="positive-copy">{c.overview.recordedThisMonth}</em></span></div>
+            <div className="summary-metric"><span className="metric-icon positive"><ArrowUpRight size={18} weight="bold" aria-hidden="true" /></span><span><small>{c.overview.incomeThisMonth}</small><strong className={moneyDensityClass(incomeLabel)} title={incomeLabel}>{incomeLabel}</strong><em className="positive-copy">{c.overview.recordedThisMonth}</em></span></div>
             <div className="summary-divider" aria-hidden="true" />
-            <div className="summary-metric"><span className="metric-icon negative"><ArrowDownRight size={18} weight="bold" aria-hidden="true" /></span><span><small>{c.overview.spendingThisMonth}</small><strong>{formatCurrency(summary.expenseThisMonth)}</strong><em className="negative-copy">{t('overview.incomeShare', { percent: formatPercent(summary.incomeThisMonth > 0 ? summary.expenseThisMonth / summary.incomeThisMonth : 0) })}</em></span></div>
+            <div className="summary-metric"><span className="metric-icon negative"><ArrowDownRight size={18} weight="bold" aria-hidden="true" /></span><span><small>{c.overview.spendingThisMonth}</small><strong className={moneyDensityClass(expenseLabel)} title={expenseLabel}>{expenseLabel}</strong><em className="negative-copy">{t('overview.incomeShare', { percent: formatPercent(summary.incomeThisMonth > 0 ? summary.expenseThisMonth / summary.incomeThisMonth : 0) })}</em></span></div>
           </div>
         </section>
         <RenewalSchedule subscriptions={upcoming} today={today} onOpen={() => onNavigate('subscriptions')} className="mobile-renewal-schedule surface-raised" />
@@ -660,6 +823,7 @@ function renewalLabel(value: string, today: string, c: ReturnType<typeof useI18n
 
 function RenewalSchedule({ subscriptions, today, onOpen, className = '' }: { subscriptions: Subscription[]; today: string; onOpen: () => void; className?: string }) {
   const { c, formatDate, plural } = useI18n();
+  const gradientId = `renewal-spectrum-${useId().replaceAll(':', '')}`;
   const plotted = subscriptions.slice(0, 3);
   const points = renewalOrbitPoints[plotted.length] ?? [];
   const firstPoint = points[0];
@@ -669,11 +833,16 @@ function RenewalSchedule({ subscriptions, today, onOpen, className = '' }: { sub
       <h2 className="renewal-schedule-mobile-title">{c.renewals.title}</h2>
       {plotted.length > 0 ? (
         <div className="renewal-orbit-layout">
-          <div className="renewal-orbit-figure" aria-hidden="true">
+          <div className="renewal-orbit-figure" data-count={plotted.length} aria-hidden="true">
             <svg className="renewal-orbit" viewBox="0 0 160 160">
+              <defs>
+                <linearGradient id={gradientId} x1="112" y1="27" x2="112" y2="133" gradientUnits="userSpaceOnUse">
+                  {plotted.map((item, index) => <stop key={item.id} offset={`${plotted.length === 1 ? 0 : (index / (plotted.length - 1)) * 100}%`} stopColor={`var(--renewal-rank-${index + 1})`} />)}
+                </linearGradient>
+              </defs>
               <circle className="renewal-orbit-track" cx="80" cy="80" r="62" pathLength="100" />
               <circle className="renewal-orbit-lip" cx="80" cy="80" r="62" pathLength="100" />
-              {plotted.length > 1 && firstPoint && lastPoint && <path className="renewal-orbit-window" d={`M ${firstPoint.x} ${firstPoint.y} A 62 62 0 0 1 ${lastPoint.x} ${lastPoint.y}`} />}
+              {plotted.length > 1 && firstPoint && lastPoint && <path className="renewal-orbit-window" stroke={`url(#${gradientId})`} d={`M ${firstPoint.x} ${firstPoint.y} A 62 62 0 0 1 ${lastPoint.x} ${lastPoint.y}`} />}
               {plotted.map((item, index) => (
                 <g className="renewal-orbit-marker" data-slot={index + 1} transform={`translate(${points[index].x} ${points[index].y})`} key={item.id}>
                   <circle className="renewal-orbit-marker-halo" r="13" />
@@ -684,10 +853,10 @@ function RenewalSchedule({ subscriptions, today, onOpen, className = '' }: { sub
             </svg>
             <span className="renewal-orbit-center"><strong>{plotted.length}</strong><small>{plural('renewals.upcomingCount', plotted.length)}</small></span>
           </div>
-          <ol className="renewal-orbit-list" style={{ gridTemplateRows: `repeat(${plotted.length}, minmax(0, 1fr))` }}>
+          <ol className="renewal-orbit-list" style={{ gridTemplateRows: `repeat(${plotted.length}, minmax(44px, auto))` }}>
             {plotted.map((item, index) => (
               <li key={item.id}>
-                <button className="renewal-orbit-row" type="button" onClick={onOpen}>
+                <button className="renewal-orbit-row" data-slot={index + 1} type="button" onClick={onOpen}>
                   <span className="renewal-orbit-key" aria-hidden="true">{index + 1}</span>
                   <span className="renewal-orbit-copy"><span className="renewal-service-name">{item.name}</span><strong><time dateTime={item.nextRenewal}>{formatDate(item.nextRenewal)}</time></strong><small className={dateOnlyDayDifference(today, item.nextRenewal) < 0 ? 'is-overdue' : ''}>{renewalLabel(item.nextRenewal, today, c, plural)}</small></span>
                 </button>
@@ -737,20 +906,24 @@ function CashflowPanel({ transactions, today, period, onPeriodChange }: { transa
 
 function SubscriptionOverview({ subscriptions, monthlyTotal, today, onOpen }: { subscriptions: Subscription[]; monthlyTotal: number; today: string; onOpen: () => void }) {
   const { c, formatCurrency } = useI18n();
+  const monthlyLabel = formatCurrency(monthlyTotal);
   return (
     <aside className="subscription-overview surface-raised" aria-labelledby="renewal-title">
       <div className="section-heading"><h2 id="renewal-title">{c.renewals.title}</h2><button type="button" className="icon-plain" onClick={onOpen} aria-label={c.renewals.openAria}><DotsThree size={22} weight="bold" aria-hidden="true" /></button></div>
       <RenewalSchedule subscriptions={subscriptions} today={today} onOpen={onOpen} />
       <div className="subscription-preview-list">
-        {subscriptions.map((item) => (
-          <button className="subscription-preview-row" type="button" onClick={onOpen} key={item.id}>
-            <span className={`service-mark ${item.tone}`} aria-hidden="true">{item.monogram}</span>
-            <span className="subscription-preview-copy"><strong>{item.name}</strong><small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small></span>
-            <strong className="subscription-preview-price">{formatCurrency(item.amount)}</strong><CaretRight size={16} weight="bold" aria-hidden="true" />
-          </button>
-        ))}
+        {subscriptions.map((item) => {
+          const amountLabel = formatCurrency(item.amount);
+          return (
+            <button className="subscription-preview-row" type="button" onClick={onOpen} key={item.id}>
+              <span className={`service-mark ${item.tone}`} aria-hidden="true">{item.monogram}</span>
+              <span className="subscription-preview-copy"><strong>{item.name}</strong><small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small></span>
+              <strong className={`subscription-preview-price ${moneyDensityClass(amountLabel)}`.trim()} title={amountLabel}>{amountLabel}</strong><CaretRight size={16} weight="bold" aria-hidden="true" />
+            </button>
+          );
+        })}
       </div>
-      <button className="subscription-total" type="button" onClick={onOpen}><span>{c.renewals.totalPerMonth}</span><strong>{formatCurrency(monthlyTotal)}</strong></button>
+      <button className="subscription-total" type="button" onClick={onOpen}><span>{c.renewals.totalPerMonth}</span><strong className={moneyDensityClass(monthlyLabel)} title={monthlyLabel}>{monthlyLabel}</strong></button>
       <p className="demo-note">{c.storage.localOnly}</p>
     </aside>
   );
@@ -764,12 +937,13 @@ function TransactionList({ transactions, compact = false, onDelete, onEdit }: { 
       {transactions.map((transaction) => {
         const Icon = categoryIcon(transaction.category);
         const title = transaction.titleKey ? c.demo.transactions[transaction.titleKey] : transaction.title;
+        const amountLabel = `${transaction.amount > 0 ? '+' : ''}${formatCurrency(transaction.amount)}`;
         return (
           <article className="transaction-row" key={transaction.id}>
-            <span className={`transaction-icon ${transaction.amount > 0 ? 'is-income' : ''}`}><Icon size={19} weight="bold" aria-hidden="true" /></span>
+            <span className={`transaction-icon ${transaction.amount > 0 ? 'is-income' : ''}`}><Icon size={19} weight="regular" aria-hidden="true" /></span>
             <span className="transaction-copy"><strong>{title}</strong><small>{c.categories[transaction.category]}</small></span>
             <time dateTime={transaction.date}>{formatDate(transaction.date)}</time>
-            <strong className={`transaction-amount ${transaction.amount > 0 ? 'is-positive' : ''}`}>{transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}</strong>
+            <strong className={`transaction-amount ${transaction.amount > 0 ? 'is-positive' : ''} ${moneyDensityClass(amountLabel)}`.trim()} title={amountLabel}>{amountLabel}</strong>
             {(onDelete || onEdit) && <div className="row-actions">{onEdit && <button className="row-action" type="button" onClick={() => onEdit(transaction)} aria-label={t('transactions.editAria', { title })}><PencilSimple size={18} weight="bold" aria-hidden="true" /></button>}{onDelete && <button className="row-action" type="button" onClick={() => onDelete(transaction.id)} aria-label={t('transactions.deleteAria', { title })}><Trash size={18} weight="bold" aria-hidden="true" /></button>}</div>}
           </article>
         );
@@ -790,7 +964,7 @@ function TransactionsView({ transactions, onDelete, onEdit, onAdd }: { transacti
   return (
     <section className="full-view surface-raised">
       <div className="view-toolbar">
-        <label className="search-field"><span className="sr-only">{c.transactions.search}</span><MagnifyingGlass size={19} weight="bold" aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={c.transactions.search} /></label>
+        <label className="search-field"><span className="sr-only">{c.transactions.search}</span><MagnifyingGlass size={19} weight="regular" aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={c.transactions.search} /></label>
         <div className="filter-group" role="group" aria-label={c.transactions.filterAria}>{(['all', 'income', 'expense'] as const).map((item) => <button type="button" key={item} className={filter === item ? 'is-active' : ''} onClick={() => setFilter(item)} aria-pressed={filter === item}>{c.transactions.filter[item]}</button>)}</div>
         <button className="secondary-action" type="button" onClick={onAdd}><Plus size={18} weight="bold" aria-hidden="true" /> {c.actions.add}</button>
       </div>
@@ -812,11 +986,13 @@ function SubscriptionsView({ subscriptions, totals, today, onAdd, onEdit, onTogg
 }) {
   const { c, formatCurrency, formatDate, plural, t } = useI18n();
   const sorted = [...subscriptions].sort((a, b) => a.nextRenewal.localeCompare(b.nextRenewal));
+  const monthlyLabel = formatCurrency(totals.monthly);
+  const annualLabel = formatCurrency(totals.annual);
   return (
     <div className="subscriptions-view">
       <section className="subscription-summary surface-raised">
-        <div><span>{c.subscriptions.monthlyTotal}</span><strong>{formatCurrency(totals.monthly)}<small> {c.subscriptions.perMonth}</small></strong></div>
-        <div><span>{c.subscriptions.annualEstimate}</span><strong>{formatCurrency(totals.annual)}</strong></div>
+        <div><span>{c.subscriptions.monthlyTotal}</span><strong className={moneyDensityClass(monthlyLabel)} title={monthlyLabel}>{monthlyLabel}<small> {c.subscriptions.perMonth}</small></strong></div>
+        <div><span>{c.subscriptions.annualEstimate}</span><strong className={moneyDensityClass(annualLabel)} title={annualLabel}>{annualLabel}</strong></div>
         <button className="secondary-action" type="button" onClick={onAdd}><Plus size={18} weight="bold" aria-hidden="true" /> {c.actions.addSubscriptionShort}</button>
       </section>
       <section className="full-view surface-raised">
@@ -824,13 +1000,14 @@ function SubscriptionsView({ subscriptions, totals, today, onAdd, onEdit, onTogg
         <div className="subscription-management-list">
           {sorted.map((item) => {
             const relativeDays = dateOnlyDayDifference(today, item.nextRenewal);
+            const amountLabel = formatCurrency(item.amount);
             return (
               <article className={`subscription-management-row ${item.status === 'paused' ? 'is-paused' : ''}`} key={item.id}>
                 <span className={`service-mark large ${item.tone}`} aria-hidden="true">{item.monogram}</span>
                 <span className="subscription-main"><strong>{item.name}</strong><small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small></span>
                 <span className={`status-label status-${item.status}`}>{c.subscriptions.status[item.status]}</span>
                 <span className={`subscription-date ${relativeDays < 0 ? 'is-overdue' : ''}`}><strong>{formatDate(item.nextRenewal)}</strong><small>{renewalLabel(item.nextRenewal, today, c, plural)}</small></span>
-                <span className="subscription-price"><strong>{formatCurrency(item.amount)}</strong><small>{item.cycle === 'year' ? c.subscriptions.cycle.perYear : c.subscriptions.cycle.perMonth}</small></span>
+                <span className="subscription-price"><strong className={moneyDensityClass(amountLabel)} title={amountLabel}>{amountLabel}</strong><small>{item.cycle === 'year' ? c.subscriptions.cycle.perYear : c.subscriptions.cycle.perMonth}</small></span>
                 <div className="management-actions">
                   <button type="button" disabled={item.status === 'paused'} onClick={() => onRecordPayment(item.id)} aria-label={t('subscriptions.recordPaymentAria', { name: item.name })} title={c.subscriptions.recordPayment}><CheckCircle size={18} weight="bold" aria-hidden="true" /></button>
                   <button type="button" onClick={() => onEdit(item)} aria-label={t('subscriptions.editAria', { name: item.name })} title={c.common.edit}><PencilSimple size={18} weight="bold" aria-hidden="true" /></button>
@@ -853,9 +1030,11 @@ function BudgetsView({ usage, today, onAdd, onEdit, onDelete }: { usage: ReturnT
   const used = usage.reduce((sum, item) => sum + item.spent, 0);
   const month = formatMonthYear(today);
   const totalRatio = total > 0 ? used / total : 0;
+  const totalLabel = formatCurrency(total);
+  const usedLabel = formatCurrency(used);
   return (
     <div className="budgets-view">
-      <section className="budget-hero surface-raised"><div><span>{t('budgets.totalForMonth', { month })}</span><strong>{formatCurrency(total)}</strong></div><div><span>{c.budgets.used}</span><strong>{formatCurrency(used)}</strong><small>{t('budgets.totalShare', { percent: formatPercent(totalRatio) })}</small></div><TrendUp size={42} weight="duotone" aria-hidden="true" /></section>
+      <section className="budget-hero surface-raised"><div><span>{t('budgets.totalForMonth', { month })}</span><strong className={moneyDensityClass(totalLabel)} title={totalLabel}>{totalLabel}</strong></div><div><span>{c.budgets.used}</span><strong className={moneyDensityClass(usedLabel)} title={usedLabel}>{usedLabel}</strong><small>{t('budgets.totalShare', { percent: formatPercent(totalRatio) })}</small></div><TrendUp size={42} weight="duotone" aria-hidden="true" /></section>
       <section className="full-view surface-raised">
         <div className="section-heading budget-list-heading"><h2>{c.budgets.byCategory}</h2><div><span>{month}</span><button className="quiet-link" type="button" onClick={onAdd}><Plus size={15} weight="bold" aria-hidden="true" />{c.actions.addBudget}</button></div></div>
         <div className="budget-list">
@@ -867,7 +1046,7 @@ function BudgetsView({ usage, today, onAdd, onEdit, onDelete }: { usage: ReturnT
             const amount = formatCurrency(Math.abs(budget.limit - budget.spent));
             return (
               <article className="budget-row" key={budget.id}>
-                <span className={`budget-icon ${over ? 'is-over' : warning ? 'is-warning' : ''}`}>{over ? <WarningCircle size={20} weight="fill" aria-hidden="true" /> : <Wallet size={20} weight="bold" aria-hidden="true" />}</span>
+                <span className={`budget-icon ${over ? 'is-over' : warning ? 'is-warning' : ''}`}>{over ? <WarningCircle size={20} weight="fill" aria-hidden="true" /> : <Wallet size={20} weight="regular" aria-hidden="true" />}</span>
                 <span className="budget-copy"><strong>{c.categories[budget.category]}</strong><small>{formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}</small></span>
                 <span className={`budget-status ${over ? 'is-over' : warning ? 'is-warning' : ''}`}>{t(over ? 'budgets.overBy' : 'budgets.remaining', { amount })}</span>
                 <span className="budget-percentage">{formatPercent(ratio)}</span>
@@ -913,15 +1092,35 @@ function isSafeAmount(value: number) {
 
 function SheetFrame({ title, subtitle, labelledBy, onClose, children, className = '' }: { title: string; subtitle: string; labelledBy: string; onClose: () => void; children: ReactNode; className?: string }) {
   const { c } = useI18n();
+  const shouldReduceMotion = useReducedMotion();
   const dialogRef = useDialogFocusTrap();
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+  useEffect(() => {
+    document.body.classList.add('is-sheet-open');
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeRef.current();
+    };
+    const frame = window.requestAnimationFrame(() => {
+      const dialog = dialogRef.current;
+      if (dialog && !dialog.contains(document.activeElement)) dialog.focus();
+    });
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.body.classList.remove('is-sheet-open');
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [dialogRef]);
   return (
-    <div className="sheet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section ref={dialogRef} className={`form-sheet ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
-        <div className="sheet-handle" aria-hidden="true" />
+    <m.div className="sheet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.16, ease: [0.2, 0, 0.38, 0.9] }}>
+      <m.section ref={dialogRef} className={`form-sheet ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1} initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 18, scale: shouldReduceMotion ? 1 : 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 12, scale: shouldReduceMotion ? 1 : 0.99 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.26, ease: [0.16, 1, 0.3, 1] }}>
         <header className="sheet-header"><div><h2 id={labelledBy}>{title}</h2><p>{subtitle}</p></div><button type="button" onClick={onClose} aria-label={c.common.close}><X size={21} weight="bold" aria-hidden="true" /></button></header>
         {children}
-      </section>
-    </div>
+      </m.section>
+    </m.div>
   );
 }
 
@@ -992,7 +1191,7 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
         <label className="field"><span>{c.subscriptionForm.plan}</span><input value={plan} onChange={(event) => setPlan(event.target.value)} placeholder={c.subscriptionForm.planPlaceholder} /></label>
         <div className="split-fields"><label className="field"><span>{c.subscriptionForm.cost}</span><div className="money-input"><input inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value.replace(/\D/g, ''))} placeholder="0" aria-invalid={Boolean(errors.amount)} aria-describedby={errors.amount ? 'subscription-amount-error' : undefined} /><strong>{currencySymbol}</strong></div>{errors.amount && <small id="subscription-amount-error" className="field-error" role="alert">{errors.amount}</small>}</label><label className="field"><span>{c.subscriptionForm.cycle.label}</span><select value={cycle} onChange={(event) => setCycle(event.target.value as BillingCycle)}><option value="month">{c.subscriptionForm.cycle.month}</option><option value="year">{c.subscriptionForm.cycle.year}</option></select></label></div>
         <label className="field"><span>{c.subscriptionForm.renewalDate}</span><input type="date" min={initial ? undefined : today} value={nextRenewal} onChange={(event) => setNextRenewal(event.target.value)} aria-invalid={Boolean(errors.nextRenewal)} aria-describedby={errors.nextRenewal ? 'subscription-renewal-error' : undefined} />{errors.nextRenewal && <small id="subscription-renewal-error" className="field-error" role="alert">{errors.nextRenewal}</small>}</label>
-        <div className="info-callout"><CalendarBlank size={20} weight="bold" aria-hidden="true" /><span>{t('subscriptionForm.callout', { appName: APP_NAME })}</span></div>
+        <div className="info-callout"><CalendarBlank size={20} weight="regular" aria-hidden="true" /><span>{t('subscriptionForm.callout', { appName: APP_NAME })}</span></div>
         <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{initial ? c.subscriptionForm.update : c.subscriptionForm.save}</button></div>
       </form>
     </SheetFrame>
@@ -1044,7 +1243,32 @@ function SettingsSheet({ data, storageStatus, onClose, onOpeningBalance, onResto
   const [openingBalance, setOpeningBalance] = useState(String(data.openingBalance));
   const [openingError, setOpeningError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<'restore' | 'clear' | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const confirmCancel = useRef<HTMLButtonElement>(null);
+  const confirmTrigger = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (!confirming) return;
+    const frame = window.requestAnimationFrame(() => {
+      confirmCancel.current?.scrollIntoView({ block: 'nearest' });
+      confirmCancel.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [confirming]);
+  function openConfirmation(kind: 'restore' | 'clear', trigger: HTMLButtonElement) {
+    confirmTrigger.current = trigger;
+    setConfirming(kind);
+  }
+  function cancelConfirmation() {
+    setConfirming(null);
+    const trigger = confirmTrigger.current;
+    confirmTrigger.current = null;
+    window.requestAnimationFrame(() => trigger?.isConnected && trigger.focus());
+  }
+  function dismissSettings() {
+    if (confirming) cancelConfirmation();
+    else onClose();
+  }
   function saveOpeningBalance(event: FormEvent) {
     event.preventDefault();
     const value = Number(openingBalance);
@@ -1063,21 +1287,33 @@ function SettingsSheet({ data, storageStatus, onClose, onOpeningBalance, onResto
     onNotify(c.toast.dataExported);
   }
   async function importData(event: ChangeEvent<HTMLInputElement>) {
+    if (isImporting) return;
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || file.size > 2_000_000) { onNotify(c.toast.importInvalid); return; }
+    setIsImporting(true);
     try {
       const parsed = parseFinanceData(await file.text());
-      if (parsed.status !== 'ok') { onNotify(c.toast.importInvalid); return; }
+      if (parsed.status !== 'ok') { setIsImporting(false); onNotify(c.toast.importInvalid); return; }
+      setIsImporting(false);
       onImport(parsed.data);
       onClose();
     } catch {
+      setIsImporting(false);
       onNotify(c.toast.importInvalid);
     }
   }
-  const statusCopy = storageStatus === 'saved' ? c.storage.saved : storageStatus === 'saving' ? c.storage.saving : c.storage.error;
+  const statusCopy = storageStatus === 'loading'
+    ? c.storage.loading
+    : storageStatus === 'saving'
+      ? c.storage.saving
+      : storageStatus === 'saved'
+        ? c.storage.saved
+        : storageStatus === 'future'
+          ? c.storage.readOnly
+          : c.storage.error;
   return (
-    <SheetFrame title={c.settings.title} subtitle={c.settings.subtitle} labelledBy="settings-sheet-title" onClose={onClose} className="settings-sheet">
+    <SheetFrame title={c.settings.title} subtitle={c.settings.subtitle} labelledBy="settings-sheet-title" onClose={dismissSettings} className="settings-sheet">
       <div className="settings-content">
         <div className="privacy-callout"><ShieldCheck size={24} weight="duotone" aria-hidden="true" /><span><strong>{c.settings.localOnlyTitle}</strong><small>{c.settings.localOnlyBody}</small></span></div>
         <span className={`settings-storage-state is-${storageStatus}`}><i aria-hidden="true" />{statusCopy}</span>
@@ -1087,14 +1323,14 @@ function SettingsSheet({ data, storageStatus, onClose, onOpeningBalance, onResto
         </form>
         <div className="settings-grid">
           <button type="button" className="settings-card" onClick={exportData}><DownloadSimple size={22} weight="bold" aria-hidden="true" /><span><strong>{c.settings.exportData}</strong><small>{c.settings.exportDataBody}</small></span></button>
-          <button type="button" className="settings-card" onClick={() => fileInput.current?.click()}><UploadSimple size={22} weight="bold" aria-hidden="true" /><span><strong>{c.settings.importData}</strong><small>{c.settings.importDataBody}</small></span></button>
-          <input ref={fileInput} className="sr-only" type="file" accept="application/json,.json" onChange={importData} aria-label={c.settings.importFileAria} />
+          <button type="button" className="settings-card" disabled={isImporting} aria-busy={isImporting} onClick={() => fileInput.current?.click()}>{isImporting ? <CircleNotch className="loading-spinner" size={22} weight="bold" aria-hidden="true" /> : <UploadSimple size={22} weight="bold" aria-hidden="true" />}<span><strong>{isImporting ? c.settings.importingData : c.settings.importData}</strong><small>{c.settings.importDataBody}</small></span></button>
+          <input ref={fileInput} hidden type="file" accept="application/json,.json" disabled={isImporting} onChange={importData} aria-label={c.settings.importFileAria} />
         </div>
         <div className="settings-danger-zone">
-          <button type="button" className="settings-row" onClick={() => setConfirming('restore')}><span><strong>{c.settings.restoreSample}</strong><small>{c.settings.restoreSampleBody}</small></span><CaretRight size={18} weight="bold" aria-hidden="true" /></button>
-          <button type="button" className="settings-row is-danger" onClick={() => setConfirming('clear')}><span><strong>{c.settings.clearAll}</strong><small>{c.settings.clearAllBody}</small></span><Trash size={19} weight="bold" aria-hidden="true" /></button>
+          <button type="button" className="settings-row" onClick={(event) => openConfirmation('restore', event.currentTarget)}><span><strong>{c.settings.restoreSample}</strong><small>{c.settings.restoreSampleBody}</small></span><CaretRight size={18} weight="bold" aria-hidden="true" /></button>
+          <button type="button" className="settings-row is-danger" onClick={(event) => openConfirmation('clear', event.currentTarget)}><span><strong>{c.settings.clearAll}</strong><small>{c.settings.clearAllBody}</small></span><Trash size={19} weight="bold" aria-hidden="true" /></button>
         </div>
-        {confirming && <div className="inline-confirm" role="alertdialog" aria-labelledby="confirm-action-title"><WarningCircle size={23} weight="fill" aria-hidden="true" /><div><strong id="confirm-action-title">{confirming === 'clear' ? c.settings.confirmClearTitle : c.settings.restoreSample}</strong><small>{confirming === 'clear' ? c.settings.confirmClearBody : c.settings.restoreSampleBody}</small></div><div><button type="button" className="cancel-action" onClick={() => setConfirming(null)}>{c.common.cancel}</button><button type="button" className="danger-action" onClick={() => { if (confirming === 'clear') onClear(); else onRestoreSample(); onClose(); }}>{confirming === 'clear' ? c.settings.confirmClearAction : c.common.confirm}</button></div></div>}
+        {confirming && <div className="inline-confirm" role="group" aria-labelledby="confirm-action-title" aria-describedby="confirm-action-description"><WarningCircle size={23} weight="fill" aria-hidden="true" /><div><strong id="confirm-action-title">{confirming === 'clear' ? c.settings.confirmClearTitle : c.settings.restoreSample}</strong><small id="confirm-action-description">{confirming === 'clear' ? c.settings.confirmClearBody : c.settings.restoreSampleBody}</small></div><div><button ref={confirmCancel} type="button" className="cancel-action" onClick={cancelConfirmation}>{c.common.cancel}</button><button type="button" className="danger-action" onClick={() => { if (confirming === 'clear') onClear(); else onRestoreSample(); onClose(); }}>{confirming === 'clear' ? c.settings.confirmClearAction : c.common.confirm}</button></div></div>}
       </div>
     </SheetFrame>
   );

@@ -2,18 +2,41 @@
 name: Tally
 description: "A premium sculpted finance system with clear tactile contours and immediately legible data."
 colors:
-  accent: "#176dfa"
-  accent-strong: "#0c5ee5"
+  accent: "#0f5fd8"
+  accent-strong: "#074dbc"
   accent-soft: "#dbe8ff"
+  accent-gradient-start: "#1e69e8"
+  accent-hover-start: "#1765df"
+  accent-hover-mid: "#0c58cb"
+  accent-hover-end: "#0648b4"
   canvas: "#eef1f5"
   surface: "#f4f6f9"
   surface-solid: "#fcfdff"
   surface-inset: "#e7ebf0"
   ink: "#111b31"
   muted: "#515a6e"
-  positive: "#18834e"
-  negative: "#cf3f48"
-  warning: "#9b6500"
+  positive: "#126b40"
+  negative: "#b52e3a"
+  warning: "#7a4a00"
+  spectral-cyan: "oklch(54% 0.12 215)"
+  spectral-violet: "oklch(54% 0.13 295)"
+  spectral-coral: "oklch(54% 0.12 28)"
+  service-green: "#0f7a4b"
+  service-blue: "#266bb7"
+  service-graphite: "#252c39"
+  service-red: "#a72e39"
+  service-violet: "#5a439a"
+  dark-surface: "#1d2430"
+  dark-surface-solid: "#252e3b"
+  dark-surface-gradient-end: "#19202b"
+  dark-control-start: "#28313f"
+  dark-control-end: "#1a212c"
+  dark-accent: "#76a3ff"
+  dark-accent-strong: "#91b4ff"
+  dark-accent-gradient-end: "#5d8fe9"
+  dark-accent-hover-start: "#a1c0ff"
+  dark-accent-hover-mid: "#83adff"
+  dark-accent-hover-end: "#6797ef"
   line: "rgba(43, 56, 80, 0.1)"
 typography:
   display:
@@ -32,30 +55,94 @@ typography:
     fontFamily: "Geist, Helvetica Neue, sans-serif"
     fontSize: "clamp(21px, 2vw, 28px)"
     fontWeight: 720
-    letterSpacing: "-0.03em"
+    letterSpacing: "-0.025em"
   title:
     fontFamily: "Geist, Helvetica Neue, sans-serif"
     fontSize: "16px"
-    fontWeight: 700
-    letterSpacing: "-0.02em"
+    fontWeight: 680
+    letterSpacing: "-0.015em"
   body:
     fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "14px"
+    fontWeight: 430
+    lineHeight: 1.5
+  control:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
     fontSize: "13px"
-    fontWeight: 400
-    lineHeight: 1.55
+    fontWeight: 680
+    lineHeight: 1.35
   label:
     fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "12px"
+    fontWeight: 620
+    lineHeight: 1.35
+  meta:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
     fontSize: "11px"
-    fontWeight: 650
+    fontWeight: 430
+    lineHeight: 1.35
+  micro:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "10px"
+    fontWeight: 430
+    lineHeight: 1.3
+  service-mark:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "15px"
+    fontWeight: 720
+  compact-value-min:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "17px"
+    fontWeight: 710
+  mobile-section:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "18px"
+    fontWeight: 720
+  mobile-app-title:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "19px"
+    fontWeight: 680
+  metric-emphasis:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "20px"
+    fontWeight: 710
+  mobile-page-heading:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "22px"
+    fontWeight: 720
+  supporting-total:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "24px"
+    fontWeight: 710
+  compact-total:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "26px"
+    fontWeight: 710
+  compact-display-min:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "27px"
+    fontWeight: 710
+  compact-display-max:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "30px"
+    fontWeight: 710
+  renewal-count:
+    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontSize: "36px"
+    fontWeight: 710
   field:
     fontFamily: "Geist, Helvetica Neue, sans-serif"
     fontSize: "16px"
     fontWeight: 400
 rounded:
+  chart-bar: "4px"
+  progress-bar: "5px"
   selected: "8px"
+  compact-tile: "9px"
   mark: "10px"
   inset: "11px"
   control: "12px"
+  compact-panel: "14px"
   panel-mobile: "16px"
   panel-desktop: "20px"
   full: "999px"
@@ -66,11 +153,20 @@ spacing:
   md: "16px"
   lg: "24px"
   xl: "32px"
+motion:
+  press: "110ms"
+  feedback: "160ms"
+  state: "180ms"
+  surface: "260ms"
+  viewEnter: "220ms"
+  viewExit: "120ms"
+  toast: "180ms"
+  enterEasing: "cubic-bezier(0.16, 1, 0.3, 1)"
 components:
   button-primary:
     backgroundColor: "{colors.accent}"
     textColor: "#ffffff"
-    typography: "{typography.body}"
+    typography: "{typography.control}"
     rounded: "{rounded.control}"
     padding: "0 18px"
     height: "46px"
@@ -79,7 +175,7 @@ components:
   button-secondary:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    typography: "{typography.body}"
+    typography: "{typography.control}"
     rounded: "{rounded.control}"
     padding: "0 18px"
     height: "46px"
@@ -131,18 +227,18 @@ The system favors immediate financial legibility, explicit states, generous brea
 **Key Characteristics:**
 
 - Pearl-grey ground with near-white material surfaces.
-- One cobalt action family with restrained semantic color.
+- One cobalt action family, restrained semantic color, and a rank-bound spectral visualization trio.
 - Sculpted directional depth: a crisp white upper-left lip and cool grey lower-right rim precede the wider shadow lobes.
 - Graphite Geist typography with tabular financial numerals.
 - Quiet divider-led rows and at least 44px mobile targets.
 - Surface corners at 16–20px; controls at 12px.
-- One canonical Tally wave mark from `public/tally-icon.png`.
+- One canonical Tally wave mark, served from the optimized `public/tally-icon-192.png` asset in the app shell.
 - Complete English and Vietnamese interfaces, with English as the default.
 
 ## Brand & Language
 
 - **Name:** Tally is the fixed one-word English product name. Do not translate or transliterate it.
-- **Canonical icon:** Use `public/tally-icon.png` (served as `/tally-icon.png`) unchanged in the app shell, browser metadata, install surfaces, and future branded imagery.
+- **Canonical icon:** `public/tally-icon.png` remains the source artwork. Use the visually identical optimized `public/tally-icon-192.png` in the app shell and browser metadata; reserve the larger variants for install and branded imagery that need them.
 - **Icon color:** The icon's baked-in teal wave is a locked brand signature. Cobalt remains the interaction accent; do not sample extra interface colors from the icon.
 - **Language model:** English (`en`) is the default locale and Vietnamese (`vi`) is a complete alternate locale. A language switch changes the full interface instead of showing both languages together.
 - **Locale behavior:** Keep information hierarchy, control dimensions, and meaning stable across locales; update document language, accessible names, date labels, and copy as one coherent locale state.
@@ -174,9 +270,19 @@ The palette combines cool neutrals with one interaction accent and restrained fi
 - **Charge Red:** Expense, error, and exceeded state.
 - **Budget Amber:** Approaching-limit warning state.
 
+### Spectral Visualization
+
+- **Current Cyan:** The next upcoming renewal (rank 1).
+- **Quiet Violet:** The second upcoming renewal (rank 2).
+- **Soft Coral:** The third upcoming renewal (rank 3).
+- These colors may appear only on the renewal visualization, its numbered key, and a low-alpha static data glow. Visible rank numbers and ordered placement remain the primary redundant cue.
+- Light mode uses deeper cores with white index text; dark mode uses brighter cores with graphite index text. The colors are authored in OKLCH with tested sRGB fallbacks.
+
 Dark mode remaps the same semantic CSS custom properties; reusable components must not hard-code the light palette.
 
 **The One Current Rule.** Cobalt marks primary action, selection, active navigation, and focus; do not introduce a second brand accent.
+
+**The Spectral Boundary Rule.** Cyan, violet, and coral are visualization auxiliaries, never interaction or semantic accents. They never replace cobalt, Ledger Green, Charge Red, or Budget Amber.
 
 ## Typography
 
@@ -188,17 +294,21 @@ Dark mode remaps the same semantic CSS custom properties; reusable components mu
 ### Hierarchy
 
 - **Display** (710, responsive 38–58px desktop / 31–40px mobile, 1): Balances and dominant totals.
-- **Headline** (720, responsive 21–28px): Page greeting or primary title.
-- **Title** (700, 16px): Card and section headings.
-- **Body** (400, 13px, 1.55): Short guidance and contextual copy.
-- **Label** (650, 11px): Metadata, controls, badges, and supporting values.
+- **Headline** (720, responsive 21–28px, 1.1): Page greeting or primary title.
+- **Title** (680, 16px, 1.25): Card and section headings.
+- **Body** (430, 14px, 1.5): Guidance and contextual copy.
+- **Control** (680, 13px, 1.35): Primary and secondary button labels.
+- **Label** (620, 12px, 1.35): Controls, badges, row titles, and supporting values.
+- **Meta** (430, 11px, 1.35): Secondary dates, statuses, and helper copy. Ten pixels is reserved for chart ticks or constrained duplicate labels.
 - **Field** (400, 16px): Text and numeric input without mobile zoom.
 
 **The Numerals Lead Rule.** Financial values use tabular numerals and tighter tracking; labels remain compact and visually subordinate.
 
 ## Layout
 
-Spacing is anchored to 4, 8, 12, 16, 24, and 32px. Mobile uses 16px gutters, tightening to 14px below 370px, and supports the full experience from 320px without horizontal page scrolling. At 769px and above, layouts gain working space; at 1180px the sidebar compacts before content is compressed. The desktop workspace is fluid up to 1540px.
+Spacing is anchored to 4, 8, 12, 16, 24, and 32px. The mobile/tablet shell uses 16px gutters, tightening to 14px below 370px, and supports the full experience from 320px without horizontal page scrolling. Components enter their phone pressure layout at 430px, the tablet composition runs from 600–900px, and the desktop sidebar begins above 900px. Coarse-pointer phone landscape up to 1024px also keeps the mobile shell when height is 520px or less. The desktop workspace is fluid up to 1540px.
+
+Safe-area insets are part of the layout contract: the sticky app bar, workspace gutters, bottom navigation, sheets, and toast respect all four edges under `viewport-fit=cover`. Financial values never wrap in the middle of a number; compact screens change composition first, and exceptional safe-integer magnitudes use the explicit compact-money treatment with the full value retained in text and `title`.
 
 **The Mobile Density Rule.** Mobile establishes the default touch size and reading order; larger screens add space, not smaller controls.
 
@@ -208,7 +318,7 @@ Depth follows the approved reference. Raised panels use a crisp one-pixel direct
 
 ### Shadow Vocabulary
 
-- **Raised:** -1px -1px white lip, 1px 1px cool-grey rim, then -10px -10px / 10px 12px highlight-and-shadow lobes; tightened below 768px.
+- **Raised:** -1px -1px white lip, 1px 1px cool-grey rim, then -10px -10px / 10px 12px highlight-and-shadow lobes; tightened in the mobile/tablet shell.
 - **Control:** the same directional lips with -5px -5px / 6px 7px compact lobes.
 - **Inset:** inset 3px 3px 8px cool-grey and inset -3px -3px 8px white, plus a faint internal rim.
 
@@ -218,7 +328,28 @@ Depth follows the approved reference. Raised panels use a crisp one-pixel direct
 
 ## Shapes
 
-Panels use softly rounded 20px corners on desktop and 16px on mobile. Controls use 12px corners; compact marks and row icons use 10px; inset groups use 11px with 8px selected segments. Pills use a full radius. Mobile sheets become edge-to-edge rather than placing a rounded panel inside a small viewport.
+Panels use softly rounded 20px corners on desktop and 16px on mobile. Controls use 12px corners; compact marks and row icons use 10px; inset groups use 11px with 8px selected segments. Pills use a full radius. Phone sheets become edge-to-edge; the 600–900px tablet tier restores a bounded centered sheet and two-column fields.
+
+## Motion
+
+Motion communicates hierarchy and state without changing the material language. Press feedback completes in 110ms and local state changes in 160–180ms. Navigation uses a bidirectional content plane keyed to the canonical tab order: the outgoing view clears in 120ms and the incoming view settles in 220ms. Sheets use a 260ms surface entrance with a faster backdrop fade; toasts use a compact 180ms entrance and a faster exit. Spatial entrances use the shared exponential ease-out; controls use a quieter standard curve.
+
+Motion for React owns stateful presence transitions (views, sheets, and toasts) through `LazyMotion` with `domAnimation`; CSS continues to own simple color, hover, theme-icon, loading-current, and press feedback. Do not animate blur, large shadows, or layout geometry during navigation.
+
+The initial local-data and locale hydration state renders a geometry-matched shell instead of sample values. On mobile it matches the three-control app bar, balance → renewal → cashflow → activity order, and bottom navigation footprint. The shell never imposes a minimum delay. Its bounded surface current and status spinner stop under reduced motion, while the static geometry and explicit loading copy remain.
+
+Reduced-motion mode removes spatial movement while preserving brief color and opacity feedback. Reduced-transparency mode makes sticky navigation and overlays opaque. High-contrast and forced-colors modes replace shadow-only contours with explicit borders and system focus colors.
+
+## Iconography
+
+Phosphor is the only interface icon family. Use 20–21px icons for navigation and shell controls, 18px for inline actions, and 16px for compact badges/carets while retaining 44–48px hit targets.
+
+- Inactive navigation uses `regular`; active navigation uses `fill` together with `aria-current` and cobalt treatment.
+- Passive page, field, category, and callout icons use `regular`.
+- CTA, edit, delete, close, and icon-only controls use `bold`.
+- Empty-state, hero, and privacy illustrations may use `duotone`.
+- Critical warning/status icons use `fill` and always sit beside explicit copy.
+- Decorative SVG icons are hidden from assistive technology; the containing control owns the accessible name.
 
 ## Components
 
@@ -226,7 +357,7 @@ Panels use softly rounded 20px corners on desktop and 16px on mobile. Controls u
 
 - **Shape:** Compact tactile controls (12px radius) with a 46px minimum height.
 - **Primary:** White text on a restrained cobalt bevel gradient with 18px horizontal padding, a directional lip, and a compact accent shadow.
-- **Hover / Focus:** Deep cobalt on hover; a 3px cobalt-mixed outline with visible offset on keyboard focus; scale to 0.98 on press.
+- **Hover / Focus:** Deep cobalt on hover; a solid 3px focus-ring token with visible offset on keyboard focus; scale to 0.98 on press.
 - **Secondary:** Graphite on Cloud Surface with the compact control shadow.
 
 ### Chips
@@ -250,7 +381,15 @@ Panels use softly rounded 20px corners on desktop and 16px on mobile. Controls u
 
 ### Navigation
 
-Desktop items are 52px-high raised controls with cobalt bevel active states. Mobile destinations retain at least 44px targets; active state uses both cobalt color and aria-current. The central mobile action is a 54px cobalt control.
+Desktop items are 52px-high raised controls with cobalt bevel active states. Mobile destinations retain at least 44px targets; active state uses cobalt, a filled Phosphor icon, and `aria-current`. Every label owns the same two-line block so English and Vietnamese keep a stable icon baseline. The central mobile action is a 54px cobalt control.
+
+### Mobile Data Rows
+
+At 430px and below, transaction actions move to a dedicated second row so identity and amount keep a readable first row. Renewal destinations are at least 44px tall. Budget rows retain their remaining/over-by copy, meter, and edit actions instead of hiding meaning to save height. From 600–900px, balance and renewals pair into a tablet grid while cashflow and activity span the full width.
+
+### Destructive Feedback
+
+Destructive row changes expose an Undo toast until the user explicitly undoes or dismisses it; recovery is never removed by a short timer. Settings confirmations are inline disclosure groups: focus moves to the least-destructive action, Escape cancels the disclosure before it closes Settings, and cancelling restores the original trigger.
 
 ### Quiet Rows
 
@@ -268,12 +407,15 @@ Transaction rows remain flat inside their parent surface and use a single hairli
 - **Do** use the canonical Tally icon without redrawing, recoloring, or adding a competing shadow treatment.
 - **Do** treat English and Vietnamese as complete, equivalent interface states; English is the initial state.
 - **Do** preserve the reference-faithful exterior contour on panels, tabs, secondary controls, and subscription preview rows in both themes.
+- **Do** keep spectral rank color redundant with visible numbers and ordered placement.
+- **Do** keep loading/saving feedback explicit without blocking the usable app during local persistence.
 
 ### Don't:
 
 - **Don't** use shadow alone to communicate selection, status, validation, or interactivity.
 - **Don't** blur a raised surface into the canvas with a centered halo or remove its directional one-pixel lip.
-- **Don't** introduce gradients outside the restrained cobalt bevel and subtle directional surface shading defined by this system.
+- **Don't** introduce gradients outside the restrained cobalt bevel, directional surface shading, bounded loading current, or rank-bound renewal visualization defined by this system.
+- **Don't** use spectral color on buttons, selected tabs, navigation, focus, validation, or financial semantic states.
 - **Don't** compress rows or controls to fit more finance data into the first view.
 - **Don't** promote page-specific charts, renewal geometry, or dashboard column arrangements into global component rules.
 - **Don't** reuse the former product name or the retired bar/tile marks on any active surface.

@@ -75,8 +75,10 @@ const enCatalog = {
   },
   storage: {
     localOnly: 'Stored only on this device',
+    loading: 'Loading local data…',
     saving: 'Saving locally…',
     saved: 'Saved on this device',
+    readOnly: 'Newer backup — read only',
     error: 'Could not save locally',
     corruptWarning: 'Some stored data could not be read. A clean workspace was opened.',
     futureVersionWarning: 'This backup was created by a newer version of Tally.',
@@ -331,6 +333,7 @@ const enCatalog = {
     exportData: 'Export data',
     exportDataBody: 'Download a backup you can keep or move to another browser.',
     importData: 'Import data',
+    importingData: 'Reading backup…',
     importDataBody: 'Restore a Tally backup from this device. Existing data will be replaced.',
     importFileAria: 'Choose a Tally backup file',
   },
@@ -398,8 +401,10 @@ const viCatalog = {
   },
   storage: {
     localOnly: 'Chỉ lưu trên thiết bị này',
+    loading: 'Đang tải dữ liệu cục bộ…',
     saving: 'Đang lưu cục bộ…',
     saved: 'Đã lưu trên thiết bị này',
+    readOnly: 'Bản sao mới hơn — chỉ đọc',
     error: 'Không thể lưu cục bộ',
     corruptWarning: 'Một phần dữ liệu đã lưu không thể đọc được. Không gian trống đã được mở.',
     futureVersionWarning: 'Bản sao lưu này được tạo bởi phiên bản Tally mới hơn.',
@@ -654,6 +659,7 @@ const viCatalog = {
     exportData: 'Xuất dữ liệu',
     exportDataBody: 'Tải bản sao lưu để cất giữ hoặc chuyển sang trình duyệt khác.',
     importData: 'Nhập dữ liệu',
+    importingData: 'Đang đọc bản sao lưu…',
     importDataBody: 'Khôi phục bản sao lưu Tally trên thiết bị này. Dữ liệu hiện tại sẽ bị thay thế.',
     importFileAria: 'Chọn tệp sao lưu Tally',
   },
@@ -730,6 +736,7 @@ export type I18nContextValue = {
   appName: typeof APP_NAME;
   locale: Locale;
   localeTag: string;
+  isLocaleHydrated: boolean;
   c: TranslationCatalog;
   catalog: TranslationCatalog;
   setLocale: (locale: Locale) => void;
@@ -844,6 +851,7 @@ export function I18nProvider({
     appName: APP_NAME,
     locale,
     localeTag,
+    isLocaleHydrated,
     c: catalog,
     catalog,
     setLocale,
@@ -856,7 +864,7 @@ export function I18nProvider({
     formatCompactNumber: (number) => numberTools.compact.format(number),
     formatDate: (date) => dateTools.short.format(normalizeDate(date)),
     formatMonthYear: (date) => dateTools.monthYear.format(normalizeDate(date)),
-  }), [catalog, dateTools, locale, localeTag, numberTools, plural, setLocale, t]);
+  }), [catalog, dateTools, isLocaleHydrated, locale, localeTag, numberTools, plural, setLocale, t]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
