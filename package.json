@@ -2,6 +2,25 @@
   "name": "tally-finance",
   "version": "0.1.0",
   "private": true,
+  "description": "A local-first personal finance tracker for cash flow, budgets, and recurring subscriptions.",
+  "homepage": "https://tally-finance.cheapdreams02.chatgpt.site",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethankpham03-ui/tally.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ethankpham03-ui/tally/issues"
+  },
+  "keywords": [
+    "personal-finance",
+    "expense-tracker",
+    "budgeting",
+    "subscription-manager",
+    "local-first",
+    "react",
+    "typescript"
+  ],
+  "license": "UNLICENSED",
   "engines": {
     "node": ">=22.13.0"
   },
@@ -9,35 +28,38 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "test": "node --test --experimental-strip-types tests/*.test.ts"
+    "typecheck": "tsc --noEmit --incremental false",
+    "lint": "eslint . --max-warnings=0",
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "test:coverage": "node --test --experimental-strip-types --experimental-test-coverage tests/*.test.ts",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "motion": "^13.1.1",
-    "next": "16.2.6",
-    "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
-    "@cloudflare/workers-types": "4.20260515.1",
+    "@cloudflare/vite-plugin": "1.54.2",
+    "@cloudflare/workers-types": "5.20260830.1",
     "@openai/sites-vite-plugin": "^0.1.0 || ^0.2.0",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
-    "@vitejs/plugin-rsc": "0.5.26",
+    "@vitejs/plugin-rsc": "0.5.34",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6",
-    "react-server-dom-webpack": "19.2.6",
+    "eslint-config-next": "16.3.3",
+    "react-server-dom-webpack": "19.2.8",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
-    "vinext": "1.0.0-beta.3",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
+    "vinext": "1.0.0-beta.8",
+    "vite": "8.2.2",
+    "wrangler": "4.127.1"
   },
   "type": "module"
 }

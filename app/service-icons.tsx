@@ -3,26 +3,32 @@
 import type { CSSProperties } from 'react';
 import type { SubscriptionTone } from './finance-domain';
 import { resolveServiceBrand, serviceBrands } from './service-brand-data';
+import { SUBSCRIPTION_CATALOG, findCatalogServiceById, findCatalogServiceByName } from './subscription-catalog';
 
 export { resolveServiceBrand, type ServiceBrand } from './service-brand-data';
 
-function foregroundFor(hex: string) {
-  const [r, g, b] = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255);
-  const luminance = (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
-  return luminance > 0.62 ? '#111827' : '#ffffff';
-}
-
 export function ServiceIcon({
+  serviceId,
   name,
   monogram,
   tone,
   large = false,
 }: {
+  serviceId?: string;
   name: string;
   monogram: string;
   tone: SubscriptionTone;
   large?: boolean;
 }) {
+  const catalogService = findCatalogServiceById(serviceId) ?? findCatalogServiceByName(name);
+  if (catalogService?.asset) {
+    const assetStyle = {
+      '--service-brand': '#ffffff',
+      '--service-asset': `url("${catalogService.asset}")`,
+    } as CSSProperties;
+    const contain = catalogService.id === 'icloud' ? ' service-brand-asset-contain' : '';
+    return <span className={`service-mark service-brand-mark service-brand-asset${contain} ${large ? 'large' : ''}`.trim()} style={assetStyle} aria-hidden="true" data-service={catalogService.id} />;
+  }
   const brand = resolveServiceBrand(name);
   if (!brand) return <span className={`service-mark ${large ? 'large ' : ''}${tone}`} aria-hidden="true">{monogram}</span>;
   if (brand.asset) {
@@ -34,10 +40,9 @@ export function ServiceIcon({
     return <span className={`service-mark service-brand-mark service-brand-asset ${large ? 'large' : ''}`.trim()} style={assetStyle} aria-hidden="true" data-service={brand.id} />;
   }
   if (!brand.hex || !brand.path) return <span className={`service-mark ${large ? 'large ' : ''}${tone}`} aria-hidden="true">{monogram}</span>;
-  const background = `#${brand.hex}`;
   const style = {
-    '--service-brand': background,
-    '--service-brand-ink': foregroundFor(brand.hex),
+    '--service-brand': '#ffffff',
+    '--service-brand-ink': `#${brand.hex}`,
   } as CSSProperties;
   return (
     <span className={`service-mark service-brand-mark ${large ? 'large' : ''}`.trim()} style={style} aria-hidden="true" data-service={brand.id}>
@@ -47,4 +52,7 @@ export function ServiceIcon({
 }
 
 export const RECOGNIZED_SERVICE_COUNT = serviceBrands.length;
-export const SERVICE_SUGGESTIONS = serviceBrands.map((brand) => brand.label);
+export const SERVICE_SUGGESTIONS = Array.from(new Set([
+  ...SUBSCRIPTION_CATALOG.map((service) => service.name),
+  ...serviceBrands.map((brand) => brand.label),
+]));

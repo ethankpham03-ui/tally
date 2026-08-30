@@ -16,6 +16,7 @@ import {
   deriveFinanceSummary,
   deriveSubscriptionTotals,
   isSafePositiveAmount,
+  isSafeSubscriptionAmount,
   isValidDateOnly,
   parseFinanceData,
   recordSubscriptionPayment,
@@ -132,7 +133,13 @@ test('subscription totals normalize annual billing and exclude paused services',
   const data = createDemoData(reference);
   const totals = deriveSubscriptionTotals(data.subscriptions);
 
-  assert.deepEqual(totals, { monthly: 985_250, annual: 11_823_000, activeCount: 5 });
+  assert.deepEqual(totals, {
+    byCurrency: [
+      { currency: 'VND', monthly: 779_000, annual: 9_348_000 },
+      { currency: 'USD', monthly: 16, annual: 192 },
+    ],
+    activeCount: 5,
+  });
 });
 
 test('versioned JSON parser distinguishes missing, corrupt, future and valid data', () => {
@@ -147,7 +154,7 @@ test('versioned JSON parser distinguishes missing, corrupt, future and valid dat
   if (parsed.status === 'ok') assert.deepEqual(parsed.data, data);
 });
 
-test('v1 backups migrate to v2 without changing financial totals', () => {
+test('v1 backups migrate to the current schema without changing financial totals', () => {
   const current = createDemoData(reference);
   const before = deriveFinanceSummary(current, reference);
   const legacy = structuredClone(current) as unknown as Record<string, unknown>;
@@ -159,6 +166,7 @@ test('v1 backups migrate to v2 without changing financial totals', () => {
   if (parsed.status !== 'ok') return;
   assert.equal(parsed.data.version, FINANCE_DATA_VERSION);
   assert.deepEqual(parsed.data.customCategories, []);
+  assert.ok(parsed.data.subscriptions.every((subscription) => subscription.currency === 'VND'));
   assert.deepEqual(deriveFinanceSummary(parsed.data, reference), before);
 });
 
@@ -176,6 +184,22 @@ test('v1 migration normalizes legacy amount and category mismatches', () => {
   if (parsed.status !== 'ok') return;
   assert.equal(parsed.migrated, true);
   assert.deepEqual(parsed.data.transactions.map((transaction) => transaction.category), ['income', 'other']);
+});
+
+test('v2 backups add VND currency to existing subscriptions', () => {
+  const legacy = structuredClone(createDemoData(reference)) as unknown as Record<string, unknown>;
+  legacy.version = 2;
+  legacy.subscriptions = (legacy.subscriptions as Array<Record<string, unknown>>).map((subscription) => {
+    const withoutCurrency = { ...subscription };
+    delete withoutCurrency.currency;
+    return withoutCurrency;
+  });
+
+  const parsed = parseFinanceData(JSON.stringify(legacy));
+  assert.equal(parsed.status, 'ok');
+  if (parsed.status !== 'ok') return;
+  assert.equal(parsed.migrated, true);
+  assert.ok(parsed.data.subscriptions.every((subscription) => subscription.currency === 'VND'));
 });
 
 test('custom categories round-trip through validated backups', () => {
@@ -221,6 +245,13 @@ test('runtime validation rejects unsafe monetary values and duplicate budget cat
   assert.equal(isSafePositiveAmount(0), false);
   assert.equal(isSafePositiveAmount(1.5), false);
   assert.equal(isSafePositiveAmount(Number.MAX_SAFE_INTEGER + 1), false);
+  assert.equal(isSafeSubscriptionAmount(1.5, 'VND'), false);
+  assert.equal(isSafeSubscriptionAmount(19.99, 'USD'), true);
+
+  const fractionalVnd = structuredClone(data);
+  fractionalVnd.subscriptions[0].amount = 1.5;
+  fractionalVnd.subscriptions[0].currency = 'VND';
+  assert.equal(validateFinanceData(fractionalVnd).valid, false);
 });
 
 test('recording a subscription payment creates one ledger expense and advances its recurrence', () => {
@@ -234,7 +265,7 @@ test('recording a subscription payment creates one ledger expense and advances i
   assert.equal(result.status, 'recorded');
   if (result.status !== 'recorded') return;
   assert.equal(result.data.transactions.length, transactionCount + 1);
-  assert.equal(result.transaction.amount, -59_000);
+  assert.equal(result.transaction.amount, -65_000);
   assert.equal(result.transaction.category, 'music');
   assert.equal(result.payment.occurrenceDate, occurrenceDate);
   assert.equal(result.data.subscriptions.find((item) => item.id === subscription.id)?.nextRenewal, '2026-09-28');
@@ -254,4 +285,5 @@ test('payment recording safely reports missing, paused and invalid requests', ()
   assert.equal(recordSubscriptionPayment(data, 'missing').status, 'not-found');
   assert.equal(recordSubscriptionPayment(data, 'demo-sub-netflix').status, 'paused');
   assert.equal(recordSubscriptionPayment(data, 'demo-sub-spotify', 'not-a-date').status, 'invalid-date');
+  assert.equal(recordSubscriptionPayment(data, 'demo-sub-figma').status, 'unsupported-currency');
 });

@@ -1,4 +1,4 @@
-export const FINANCE_DATA_VERSION = 2 as const;
+export const FINANCE_DATA_VERSION = 3 as const;
 export const FINANCE_STORAGE_KEY = 'tally-finance-v1';
 
 export const CATEGORY_ICON_IDS = [
@@ -145,6 +145,7 @@ export type ExpenseCategoryId = BuiltInExpenseCategoryId | CustomExpenseCategory
 export const EXPENSE_CATEGORIES = EXPENSE_CATEGORY_DEFINITIONS.map((category) => category.id) as BuiltInExpenseCategoryId[];
 export type CategoryId = 'income' | ExpenseCategoryId;
 export type BillingCycle = 'month' | 'year';
+export type SubscriptionCurrency = 'VND' | 'USD' | 'EUR' | 'GBP' | 'JPY' | 'KRW' | 'SGD' | 'THB' | 'AUD' | 'CAD';
 export type SubscriptionStatus = 'active' | 'trial' | 'paused';
 export type SubscriptionTone = 'green' | 'blue' | 'graphite' | 'red' | 'violet';
 export type FinanceMode = 'demo' | 'personal';
@@ -191,10 +192,13 @@ export type CustomExpenseCategory = {
 
 export type Subscription = {
   id: string;
+  serviceId?: string;
+  planId?: string;
   name: string;
   plan: string;
   planKey?: DemoPlanId;
   amount: number;
+  currency: SubscriptionCurrency;
   cycle: BillingCycle;
   nextRenewal: string;
   renewalAnchorDay: number;
@@ -231,6 +235,18 @@ export type FinanceDataV1 = {
 };
 
 export type FinanceDataV2 = {
+  version: 2;
+  mode: FinanceMode;
+  updatedAt: string;
+  openingBalance: number;
+  transactions: Transaction[];
+  subscriptions: Omit<Subscription, 'currency'>[];
+  budgets: Budget[];
+  subscriptionPayments: SubscriptionPayment[];
+  customCategories: CustomExpenseCategory[];
+};
+
+export type FinanceDataV3 = {
   version: typeof FINANCE_DATA_VERSION;
   mode: FinanceMode;
   updatedAt: string;
@@ -242,7 +258,7 @@ export type FinanceDataV2 = {
   customCategories: CustomExpenseCategory[];
 };
 
-export type FinanceData = FinanceDataV2;
+export type FinanceData = FinanceDataV3;
 
 export type FinanceSummary = {
   availableBalance: number;
@@ -272,8 +288,11 @@ export type CashflowPoint = {
 };
 
 export type SubscriptionTotals = {
-  monthly: number;
-  annual: number;
+  byCurrency: Array<{
+    currency: SubscriptionCurrency;
+    monthly: number;
+    annual: number;
+  }>;
   activeCount: number;
 };
 
@@ -290,7 +309,7 @@ export type ParseFinanceDataResult =
 export type RecordSubscriptionPaymentResult =
   | { status: 'recorded'; data: FinanceData; payment: SubscriptionPayment; transaction: Transaction }
   | { status: 'already-recorded'; data: FinanceData; payment: SubscriptionPayment }
-  | { status: 'not-found' | 'paused' | 'invalid-date'; data: FinanceData };
+  | { status: 'not-found' | 'paused' | 'invalid-date' | 'unsupported-currency'; data: FinanceData };
 
 type DateParts = { year: number; month: number; day: number };
 type UnknownRecord = Record<string, unknown>;
@@ -302,6 +321,7 @@ const LEGACY_EXPENSE_CATEGORY_SET = new Set<string>(['dining', 'shopping', 'tran
 const CATEGORY_ICON_SET = new Set<string>(CATEGORY_ICON_IDS);
 const CUSTOM_CATEGORY_PATTERN = /^custom:[a-zA-Z0-9][a-zA-Z0-9_-]{5,}$/;
 const BILLING_CYCLE_SET = new Set<string>(['month', 'year']);
+const SUBSCRIPTION_CURRENCY_SET = new Set<string>(['VND', 'USD', 'EUR', 'GBP', 'JPY', 'KRW', 'SGD', 'THB', 'AUD', 'CAD']);
 const STATUS_SET = new Set<string>(['active', 'trial', 'paused']);
 const TONE_SET = new Set<string>(['green', 'blue', 'graphite', 'red', 'violet']);
 const MODE_SET = new Set<string>(['demo', 'personal']);
@@ -420,6 +440,17 @@ export function isSafePositiveAmount(value: unknown): value is number {
   return isSafeMoney(value) && value > 0;
 }
 
+export function isSafeSubscriptionAmount(value: unknown, currency: SubscriptionCurrency): value is number {
+  if (typeof value !== 'number') return false;
+  const hasValidMinorUnits = currency === 'VND' || currency === 'JPY' || currency === 'KRW'
+    ? Number.isInteger(value)
+    : Math.abs(Math.round(value * 100) - (value * 100)) < 1e-6;
+  return Number.isFinite(value)
+    && value > 0
+    && value <= Number.MAX_SAFE_INTEGER
+    && hasValidMinorUnits;
+}
+
 export function isBuiltInExpenseCategory(value: unknown): value is BuiltInExpenseCategoryId {
   return typeof value === 'string' && EXPENSE_CATEGORY_SET.has(value);
 }
@@ -517,9 +548,12 @@ export function createDemoData(reference = new Date()): FinanceData {
 
   const subscription = (
     id: string,
+    serviceId: string,
+    planId: string,
     name: string,
     planKey: DemoPlanId,
     amount: number,
+    currency: SubscriptionCurrency,
     cycle: BillingCycle,
     daysAhead: number,
     status: SubscriptionStatus,
@@ -529,10 +563,13 @@ export function createDemoData(reference = new Date()): FinanceData {
     const nextRenewal = renewal(daysAhead);
     return {
       id,
+      serviceId,
+      planId,
       name,
       plan: '',
       planKey,
       amount,
+      currency,
       cycle,
       nextRenewal,
       renewalAnchorDay: requireDateOnly(nextRenewal).day,
@@ -549,12 +586,12 @@ export function createDemoData(reference = new Date()): FinanceData {
     openingBalance: 14_000_000,
     transactions,
     subscriptions: [
-      subscription('demo-sub-spotify', 'Spotify', 'personal', 59_000, 'month', 1, 'active', 'S', 'green'),
-      subscription('demo-sub-figma', 'Figma', 'professional', 249_000, 'month', 6, 'active', 'F', 'graphite'),
-      subscription('demo-sub-icloud', 'iCloud+', 'storage200Gb', 69_000, 'month', 9, 'active', 'i', 'blue'),
-      subscription('demo-sub-chatgpt', 'ChatGPT', 'plus', 500_000, 'month', 11, 'active', 'C', 'graphite'),
-      subscription('demo-sub-netflix', 'Netflix', 'standard', 260_000, 'month', 14, 'paused', 'N', 'red'),
-      subscription('demo-sub-duolingo', 'Duolingo', 'super', 1_299_000, 'year', 23, 'trial', 'D', 'violet'),
+      subscription('demo-sub-spotify', 'spotify', 'premium-individual', 'Spotify', 'personal', 65_000, 'VND', 'month', 1, 'active', 'S', 'green'),
+      subscription('demo-sub-figma', 'figma', 'professional-full-annual', 'Figma', 'professional', 192, 'USD', 'year', 6, 'active', 'F', 'graphite'),
+      subscription('demo-sub-apple-music', 'apple-music', 'individual', 'Apple Music', 'personal', 65_000, 'VND', 'month', 9, 'active', 'A', 'red'),
+      subscription('demo-sub-chatgpt', 'chatgpt', 'plus-ios', 'ChatGPT', 'plus', 499_000, 'VND', 'month', 11, 'active', 'C', 'graphite'),
+      subscription('demo-sub-netflix', 'netflix', 'standard', 'Netflix', 'standard', 231_000, 'VND', 'month', 14, 'paused', 'N', 'red'),
+      subscription('demo-sub-canva', 'canva', 'pro-monthly', 'Canva', 'professional', 150_000, 'VND', 'month', 23, 'trial', 'C', 'violet'),
     ],
     budgets: [
       { id: 'demo-budget-dining', category: 'dining', limit: 4_000_000 },
@@ -656,8 +693,22 @@ export function monthlySubscriptionEquivalent(subscription: Pick<Subscription, '
 
 export function deriveSubscriptionTotals(subscriptions: readonly Subscription[]): SubscriptionTotals {
   const tracked = subscriptions.filter((subscription) => subscription.status !== 'paused');
-  const monthly = tracked.reduce((total, subscription) => total + monthlySubscriptionEquivalent(subscription), 0);
-  return { monthly: Math.round(monthly), annual: Math.round(monthly * 12), activeCount: tracked.length };
+  const grouped = new Map<SubscriptionCurrency, number>();
+  for (const subscription of tracked) {
+    grouped.set(subscription.currency, (grouped.get(subscription.currency) ?? 0) + monthlySubscriptionEquivalent(subscription));
+  }
+  const round = (value: number, currency: SubscriptionCurrency) => (
+    currency === 'VND' || currency === 'JPY' || currency === 'KRW'
+      ? Math.round(value)
+      : Math.round(value * 100) / 100
+  );
+  const byCurrency = (['VND', 'USD', 'EUR', 'GBP', 'JPY', 'KRW', 'SGD', 'THB', 'AUD', 'CAD'] as const)
+    .filter((currency) => grouped.has(currency))
+    .map((currency) => {
+      const monthly = grouped.get(currency) ?? 0;
+      return { currency, monthly: round(monthly, currency), annual: round(monthly * 12, currency) };
+    });
+  return { byCurrency, activeCount: tracked.length };
 }
 
 function parseTransaction(value: unknown, path: string, issues: string[]): Transaction | null {
@@ -687,12 +738,16 @@ function parseTransaction(value: unknown, path: string, issues: string[]): Trans
 
 function parseSubscription(value: unknown, path: string, issues: string[]): Subscription | null {
   if (!isRecord(value)) { issues.push(`${path} must be an object`); return null; }
-  const { id, name, plan, planKey, amount, cycle, nextRenewal, renewalAnchorDay, status, previousStatus, monogram, tone } = value;
+  const { id, serviceId, planId, name, plan, planKey, amount, currency, cycle, nextRenewal, renewalAnchorDay, status, previousStatus, monogram, tone } = value;
   if (!isNonEmptyString(id)) issues.push(`${path}.id must be a non-empty string`);
+  if (!isOptionalString(serviceId)) issues.push(`${path}.serviceId must be a string`);
+  if (!isOptionalString(planId)) issues.push(`${path}.planId must be a string`);
   if (!isNonEmptyString(name)) issues.push(`${path}.name must be a non-empty string`);
   if (typeof plan !== 'string') issues.push(`${path}.plan must be a string`);
   if (planKey !== undefined && (typeof planKey !== 'string' || !DEMO_PLAN_SET.has(planKey))) issues.push(`${path}.planKey is invalid`);
-  if (!isSafePositiveAmount(amount)) issues.push(`${path}.amount must be a positive safe integer`);
+  const validCurrency = typeof currency === 'string' && SUBSCRIPTION_CURRENCY_SET.has(currency);
+  if (!isSafeSubscriptionAmount(amount, validCurrency ? currency as SubscriptionCurrency : 'USD')) issues.push(`${path}.amount has invalid minor units`);
+  if (!validCurrency) issues.push(`${path}.currency is invalid`);
   if (typeof cycle !== 'string' || !BILLING_CYCLE_SET.has(cycle)) issues.push(`${path}.cycle is invalid`);
   if (!isValidDateOnly(nextRenewal)) issues.push(`${path}.nextRenewal is invalid`);
   if (!Number.isSafeInteger(renewalAnchorDay) || (renewalAnchorDay as number) < 1 || (renewalAnchorDay as number) > 31) issues.push(`${path}.renewalAnchorDay is invalid`);
@@ -703,10 +758,13 @@ function parseSubscription(value: unknown, path: string, issues: string[]): Subs
   if (issues.some((issue) => issue.startsWith(path))) return null;
   return {
     id: id as string,
+    ...(serviceId === undefined ? {} : { serviceId: serviceId as string }),
+    ...(planId === undefined ? {} : { planId: planId as string }),
     name: name as string,
     plan: plan as string,
     ...(planKey === undefined ? {} : { planKey: planKey as DemoPlanId }),
     amount: amount as number,
+    currency: currency as SubscriptionCurrency,
     cycle: cycle as BillingCycle,
     nextRenewal: nextRenewal as string,
     renewalAnchorDay: renewalAnchorDay as number,
@@ -857,7 +915,22 @@ function migrateFinanceDataV1(value: UnknownRecord): UnknownRecord {
     ...value,
     version: FINANCE_DATA_VERSION,
     transactions,
+    subscriptions: migrateLegacySubscriptions(value.subscriptions),
     customCategories: [],
+  };
+}
+
+function migrateLegacySubscriptions(value: unknown) {
+  return Array.isArray(value)
+    ? value.map((subscription) => isRecord(subscription) ? { ...subscription, currency: 'VND' } : subscription)
+    : value;
+}
+
+function migrateFinanceDataV2(value: UnknownRecord): UnknownRecord {
+  return {
+    ...value,
+    version: FINANCE_DATA_VERSION,
+    subscriptions: migrateLegacySubscriptions(value.subscriptions),
   };
 }
 
@@ -872,9 +945,11 @@ export function parseFinanceData(raw: string | null | undefined): ParseFinanceDa
   if (isRecord(parsed) && typeof parsed.version === 'number' && parsed.version > FINANCE_DATA_VERSION) {
     return { status: 'future-version', version: parsed.version };
   }
-  const legacy = isRecord(parsed) && parsed.version === 1 ? parsed : undefined;
+  const legacy = isRecord(parsed) && (parsed.version === 1 || parsed.version === 2) ? parsed : undefined;
   const migrated = legacy !== undefined;
-  const candidate = legacy ? migrateFinanceDataV1(legacy) : parsed;
+  const candidate = legacy
+    ? legacy.version === 1 ? migrateFinanceDataV1(legacy) : migrateFinanceDataV2(legacy)
+    : parsed;
   const result = validateFinanceData(candidate);
   return result.valid
     ? { status: 'ok', data: result.data, ...(migrated ? { migrated: true as const } : {}) }
@@ -921,6 +996,7 @@ export function recordSubscriptionPayment(
   const subscription = data.subscriptions.find((item) => item.id === subscriptionId);
   if (!subscription) return { status: 'not-found', data };
   if (subscription.status === 'paused') return { status: 'paused', data };
+  if (subscription.currency !== 'VND') return { status: 'unsupported-currency', data };
   const occurrenceDate = subscription.nextRenewal;
   const existing = data.subscriptionPayments.find(
     (payment) => payment.subscriptionId === subscriptionId && payment.occurrenceDate === occurrenceDate,

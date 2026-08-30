@@ -2,13 +2,13 @@
 name: Tally
 description: "A premium sculpted finance system with clear tactile contours and immediately legible data."
 colors:
-  accent: "#0f5fd8"
-  accent-strong: "#074dbc"
-  accent-soft: "#dbe8ff"
-  accent-gradient-start: "#1e69e8"
-  accent-hover-start: "#1765df"
-  accent-hover-mid: "#0c58cb"
-  accent-hover-end: "#0648b4"
+  accent: "#00758a"
+  accent-strong: "#005f70"
+  accent-soft: "#d9f1f3"
+  accent-gradient-start: "#007a8f"
+  accent-hover-start: "#006f83"
+  accent-hover-mid: "#00697c"
+  accent-hover-end: "#005f70"
   canvas: "#eef1f5"
   surface: "#f4f6f9"
   surface-solid: "#fcfdff"
@@ -202,7 +202,7 @@ components:
     padding: "0 13px"
     height: "34px"
   segment-item-active:
-    backgroundColor: "restrained cobalt bevel gradient"
+    backgroundColor: "restrained logo-teal bevel gradient"
     textColor: "#ffffff"
   nav-item:
     textColor: "{colors.muted}"
@@ -220,14 +220,14 @@ components:
 
 **Creative North Star: "The Quiet Current"**
 
-Tally feels like a calm current shaped into premium tactile surfaces: a pearl-grey field, crisp directional highlight-and-shadow contours, graphite type, and cobalt action. The approved reference determines the material expression; there is no fixed Minimalism/Neumorphism ratio.
+Tally feels like a calm current shaped into premium tactile surfaces: a pearl-grey field, crisp directional highlight-and-shadow contours, graphite type, and logo-teal action. The approved reference determines the material expression; there is no fixed Minimalism/Neumorphism ratio.
 
 The system favors immediate financial legibility, explicit states, generous breathing room, and clearly sculpted panel edges. Depth never carries meaning by itself. Mobile web sets the default density and touch behavior, while wider layouts add working room without shrinking controls.
 
 **Key Characteristics:**
 
 - Pearl-grey ground with near-white material surfaces.
-- One cobalt action family, restrained semantic color, and a rank-bound spectral visualization trio.
+- One logo-teal action family in the light theme, restrained semantic color, and a rank-bound spectral visualization trio.
 - Sculpted directional depth: a crisp white upper-left lip and cool grey lower-right rim precede the wider shadow lobes.
 - Graphite Be Vietnam Pro interface typography with Geist tabular financial numerals.
 - Quiet divider-led rows and at least 44px mobile targets.
@@ -239,7 +239,7 @@ The system favors immediate financial legibility, explicit states, generous brea
 
 - **Name:** Tally is the fixed one-word English product name. Do not translate or transliterate it.
 - **Canonical icon:** `public/tally-icon.png` remains the source artwork. Use the visually identical optimized `public/tally-icon-192.png` in the app shell and browser metadata; reserve the larger variants for install and branded imagery that need them.
-- **Icon color:** The icon's baked-in teal wave is a locked brand signature. Cobalt remains the interaction accent; do not sample extra interface colors from the icon.
+- **Icon color:** The icon's baked-in teal wave is a locked brand signature. The light-theme interaction family is sampled from that wave, then darkened enough to keep white text above WCAG AA. The dark theme keeps its separate accessible blue treatment.
 - **Language model:** English (`en`) is the default locale and Vietnamese (`vi`) is a complete alternate locale. A language switch changes the full interface instead of showing both languages together.
 - **Locale behavior:** Keep information hierarchy, control dimensions, and meaning stable across locales; update document language, accessible names, date labels, and copy as one coherent locale state.
 - **Identity model:** Tally is local-only and has no sign-in, account profile, or cloud identity. Do not place avatars or account affordances in the app shell.
@@ -250,9 +250,9 @@ The palette combines cool neutrals with one interaction accent and restrained fi
 
 ### Primary
 
-- **Current Cobalt:** Primary actions, active navigation, selected segments, focus, and sparse emphasis.
-- **Deep Current:** Hover treatment for cobalt actions.
-- **Cobalt Haze:** Soft icon, callout, and selected-context backgrounds.
+- **Tally Teal:** Primary actions, active navigation, selected segments, focus, and sparse emphasis in the light theme.
+- **Deep Current:** Hover treatment for Tally Teal actions.
+- **Current Mist:** Soft icon, callout, and selected-context backgrounds.
 
 ### Neutral
 
@@ -280,9 +280,9 @@ The palette combines cool neutrals with one interaction accent and restrained fi
 
 Dark mode remaps the same semantic CSS custom properties; reusable components must not hard-code the light palette.
 
-**The One Current Rule.** Cobalt marks primary action, selection, active navigation, and focus; do not introduce a second brand accent.
+**The One Current Rule.** Tally Teal marks primary action, selection, active navigation, and focus in the light theme; do not introduce a second brand accent.
 
-**The Spectral Boundary Rule.** Cyan, violet, and coral are visualization auxiliaries, never interaction or semantic accents. They never replace cobalt, Ledger Green, Charge Red, or Budget Amber.
+**The Spectral Boundary Rule.** Cyan, violet, and coral are visualization auxiliaries, never interaction or semantic accents. They never replace Tally Teal, Ledger Green, Charge Red, or Budget Amber.
 
 ## Typography
 
@@ -345,7 +345,7 @@ Reduced-motion mode removes spatial movement while preserving brief color and op
 
 Phosphor is the only interface and expense-category icon family. Use 20–21px icons for navigation and shell controls, 18px for inline actions, and 16px for compact badges/carets while retaining 44–48px hit targets. Subscription services use locally bundled Simple Icons brand marks or an unmodified verified official app asset where available, with the existing Tally monogram tile as a neutral fallback.
 
-- Inactive navigation uses `regular`; active navigation uses `fill` together with `aria-current` and cobalt treatment.
+- Inactive navigation uses `regular`; active navigation uses `fill` together with `aria-current` and the interaction accent treatment.
 - Passive page, field, category, and callout icons use `regular`.
 - CTA, edit, delete, close, and icon-only controls use `bold`.
 - Empty-state, hero, and privacy illustrations may use `duotone`.
@@ -357,14 +357,14 @@ Phosphor is the only interface and expense-category icon family. Use 20–21px i
 ### Buttons
 
 - **Shape:** Compact tactile controls (12px radius) with a 46px minimum height.
-- **Primary:** White text on a restrained cobalt bevel gradient with 18px horizontal padding, a directional lip, and a compact accent shadow.
-- **Hover / Focus:** Deep cobalt on hover; a solid 3px focus-ring token with visible offset on keyboard focus; scale to 0.98 on press.
+- **Primary:** White text on a restrained logo-teal bevel gradient with 18px horizontal padding, a directional lip, and a compact accent shadow.
+- **Hover / Focus:** Deep Current on hover; a solid 3px focus-ring token with visible offset on keyboard focus; scale to 0.98 on press.
 - **Secondary:** Graphite on Cloud Surface with the compact control shadow.
 
 ### Chips
 
 - **Style:** Metadata pills use a full radius and quiet tint. Segmented controls sit in an 11px raised tray with a clear exterior contour and 8px selections.
-- **State:** Selected segments use the restrained cobalt bevel and white text; unselected choices remain muted and flat inside the raised tray.
+- **State:** Selected segments use the restrained logo-teal bevel and white text; unselected choices remain muted and flat inside the raised tray.
 
 ### Cards / Containers
 
@@ -377,12 +377,12 @@ Phosphor is the only interface and expense-category icon family. Use 20–21px i
 ### Inputs / Fields
 
 - **Style:** White Field background, quiet 1px border, 12px radius, 50px desktop / 52px mobile height.
-- **Focus:** Cobalt border plus a 3px visible outline.
+- **Focus:** Interaction-accent border plus a 3px visible outline.
 - **Error:** Charge Red border and explicit helper copy.
 
 ### Navigation
 
-Desktop items are 52px-high raised controls with cobalt bevel active states. Mobile destinations retain at least 44px targets; active state uses cobalt, a filled Phosphor icon, and `aria-current`. Every label owns the same two-line block so English and Vietnamese keep a stable icon baseline. The central mobile action is a 54px cobalt control.
+Desktop items are 52px-high raised controls with interaction-accent bevel active states. Mobile destinations retain at least 44px targets; active state uses the interaction accent, a filled Phosphor icon, and `aria-current`. Every label owns the same two-line block so English and Vietnamese keep a stable icon baseline. The central mobile action is a 54px interaction-accent control.
 
 ### Mobile Data Rows
 
@@ -401,7 +401,7 @@ Transaction rows remain flat inside their parent surface and use a single hairli
 ### Do:
 
 - **Do** keep the page ground pearl-grey and place primary content on near-white surfaces.
-- **Do** reserve cobalt for the primary action, active destination, selected segment, focus, and sparse emphasis.
+- **Do** reserve Tally Teal in the light theme for the primary action, active destination, selected segment, focus, and sparse emphasis.
 - **Do** use tabular numerals for balances, amounts, dates, and percentages.
 - **Do** keep mobile tap targets at least 44px and preserve the 320px no-horizontal-scroll floor.
 - **Do** pair positive, negative, and warning color with explicit copy or labels.
@@ -415,7 +415,7 @@ Transaction rows remain flat inside their parent surface and use a single hairli
 
 - **Don't** use shadow alone to communicate selection, status, validation, or interactivity.
 - **Don't** blur a raised surface into the canvas with a centered halo or remove its directional one-pixel lip.
-- **Don't** introduce gradients outside the restrained cobalt bevel, directional surface shading, bounded loading current, or rank-bound renewal visualization defined by this system.
+- **Don't** introduce gradients outside the restrained interaction-accent bevel, directional surface shading, bounded loading current, or rank-bound renewal visualization defined by this system.
 - **Don't** use spectral color on buttons, selected tabs, navigation, focus, validation, or financial semantic states.
 - **Don't** compress rows or controls to fit more finance data into the first view.
 - **Don't** promote page-specific charts, renewal geometry, or dashboard column arrangements into global component rules.

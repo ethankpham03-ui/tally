@@ -2,6 +2,7 @@
 
 import {
   ArrowDownRight,
+  ArrowSquareOut,
   ArrowUpRight,
   ArrowsDownUp,
   CalendarBlank,
@@ -63,6 +64,7 @@ import {
   deriveCashflowSeries,
   deriveFinanceSummary,
   deriveSubscriptionTotals,
+  isSafeSubscriptionAmount,
   localTodayIso,
   parseFinanceData,
   recordSubscriptionPayment,
@@ -74,13 +76,26 @@ import {
   type ExpenseCategoryId,
   type FinanceData,
   type Subscription,
+  type SubscriptionCurrency,
   type Transaction,
 } from './finance-domain';
 import { CategoryIcon } from './category-icons';
 import { CategoryPicker, expenseCategoryIcon, expenseCategoryLabel } from './category-picker';
 import { APP_NAME, I18nProvider, useI18n, type Locale } from './i18n';
 import { VIEW_ORDER, viewDirection as getViewDirection, viewFromHashValue, type View } from './navigation';
-import { SERVICE_SUGGESTIONS, ServiceIcon } from './service-icons';
+import { ServiceIcon } from './service-icons';
+import {
+  MANUAL_PLAN_ID,
+  MANUAL_SERVICE_ID,
+  SUBSCRIPTION_CATALOG,
+  catalogPlanLabel,
+  catalogPlanCanAutofill,
+  catalogPlanNote,
+  catalogPriceNotice,
+  findCatalogPlan,
+  findCatalogServiceById,
+  findCatalogServiceByName,
+} from './subscription-catalog';
 
 type Theme = 'light' | 'dark';
 type TransactionType = 'income' | 'expense';
@@ -102,13 +117,37 @@ type TransactionInput = {
   customCategory?: CustomExpenseCategory;
 };
 type SubscriptionInput = {
+  serviceId?: string;
+  planId?: string;
   name: string;
   plan: string;
   amount: number;
+  currency: SubscriptionCurrency;
   cycle: BillingCycle;
   nextRenewal: string;
 };
 type BudgetInput = { category: ExpenseCategoryId; limit: number; customCategory?: CustomExpenseCategory };
+
+function formatSubscriptionMoney(amount: number, currency: SubscriptionCurrency, localeTag: string) {
+  const zeroDecimal = currency === 'VND' || currency === 'JPY' || currency === 'KRW';
+  return new Intl.NumberFormat(localeTag, {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: zeroDecimal ? 0 : 2,
+    minimumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatSubscriptionTotals(
+  totals: ReturnType<typeof deriveSubscriptionTotals>,
+  period: 'monthly' | 'annual',
+  localeTag: string,
+) {
+  if (totals.byCurrency.length === 0) return formatSubscriptionMoney(0, 'VND', localeTag);
+  return totals.byCurrency
+    .map((total) => formatSubscriptionMoney(total[period], total.currency, localeTag))
+    .join(' + ');
+}
 
 const renewalOrbitPoints: Record<number, ReadonlyArray<{ x: number; y: number }>> = {
   1: [{ x: 142, y: 80 }],
@@ -534,10 +573,13 @@ function AppContent() {
     const subscription: Subscription = {
       ...(existing ?? {}),
       id: existing?.id ?? createId('subscription'),
+      serviceId: input.serviceId,
+      planId: input.planId,
       name: input.name,
       plan: input.plan,
       planKey: undefined,
       amount: input.amount,
+      currency: input.currency,
       cycle: input.cycle,
       nextRenewal: input.nextRenewal,
       renewalAnchorDay: Number(input.nextRenewal.slice(-2)),
@@ -579,6 +621,10 @@ function AppContent() {
   function recordPayment(id: string) {
     const snapshot = data;
     const result = recordSubscriptionPayment(data, id, today);
+    if (result.status === 'unsupported-currency') {
+      showToast(c.toast.paymentCurrencyUnsupported);
+      return;
+    }
     if (result.status !== 'recorded') return;
     updateData(() => result.data);
     showToast(c.toast.paymentRecorded, () => restoreSnapshot(snapshot, c.toast.paymentReverted));
@@ -720,7 +766,7 @@ function AppContent() {
                   summary={summary}
                   transactions={transactions}
                   subscriptions={activeSubscriptions}
-                  subscriptionMonthlyTotal={subscriptionTotals.monthly}
+                  subscriptionTotals={subscriptionTotals}
                   customCategories={data.customCategories}
                   today={today}
                   onNavigate={navigate}
@@ -777,11 +823,11 @@ function AppContent() {
   );
 }
 
-function Overview({ summary, transactions, subscriptions, subscriptionMonthlyTotal, customCategories, today, onNavigate, onAddTransaction }: {
+function Overview({ summary, transactions, subscriptions, subscriptionTotals, customCategories, today, onNavigate, onAddTransaction }: {
   summary: ReturnType<typeof deriveFinanceSummary>;
   transactions: Transaction[];
   subscriptions: Subscription[];
-  subscriptionMonthlyTotal: number;
+  subscriptionTotals: ReturnType<typeof deriveSubscriptionTotals>;
   customCategories: CustomExpenseCategory[];
   today: string;
   onNavigate: (view: View) => void;
@@ -813,7 +859,7 @@ function Overview({ summary, transactions, subscriptions, subscriptionMonthlyTot
           <button className="mobile-inline-action" type="button" onClick={onAddTransaction}><Plus size={18} weight="bold" aria-hidden="true" /> {c.actions.addTransaction}</button>
         </section>
       </div>
-      <SubscriptionOverview subscriptions={upcoming} monthlyTotal={subscriptionMonthlyTotal} today={today} onOpen={() => onNavigate('subscriptions')} />
+      <SubscriptionOverview subscriptions={upcoming} totals={subscriptionTotals} today={today} onOpen={() => onNavigate('subscriptions')} />
     </div>
   );
 }
@@ -908,20 +954,22 @@ function CashflowPanel({ transactions, today, period, onPeriodChange }: { transa
   );
 }
 
-function SubscriptionOverview({ subscriptions, monthlyTotal, today, onOpen }: { subscriptions: Subscription[]; monthlyTotal: number; today: string; onOpen: () => void }) {
-  const { c, formatCurrency } = useI18n();
-  const monthlyLabel = formatCurrency(monthlyTotal);
+function SubscriptionOverview({ subscriptions, totals, today, onOpen }: { subscriptions: Subscription[]; totals: ReturnType<typeof deriveSubscriptionTotals>; today: string; onOpen: () => void }) {
+  const { c, locale, localeTag } = useI18n();
+  const monthlyLabel = formatSubscriptionTotals(totals, 'monthly', localeTag);
   return (
     <aside className="subscription-overview surface-raised" aria-labelledby="renewal-title">
       <div className="section-heading"><h2 id="renewal-title">{c.renewals.title}</h2><button type="button" className="icon-plain" onClick={onOpen} aria-label={c.renewals.openAria}><DotsThree size={22} weight="bold" aria-hidden="true" /></button></div>
       <RenewalSchedule subscriptions={subscriptions} today={today} onOpen={onOpen} />
       <div className="subscription-preview-list">
         {subscriptions.map((item) => {
-          const amountLabel = formatCurrency(item.amount);
+          const amountLabel = formatSubscriptionMoney(item.amount, item.currency, localeTag);
+          const catalogPlan = findCatalogPlan(item.serviceId, item.planId);
+          const planLabel = catalogPlan ? catalogPlanLabel(catalogPlan, locale) : item.planKey ? c.demo.plans[item.planKey] : item.plan;
           return (
             <button className="subscription-preview-row" type="button" onClick={onOpen} key={item.id}>
-              <ServiceIcon name={item.name} monogram={item.monogram} tone={item.tone} />
-              <span className="subscription-preview-copy"><strong>{item.name}</strong>{(item.planKey || item.plan) && <small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small>}</span>
+              <ServiceIcon serviceId={item.serviceId} name={item.name} monogram={item.monogram} tone={item.tone} />
+              <span className="subscription-preview-copy"><strong>{item.name}</strong>{planLabel && <small>{planLabel}</small>}</span>
               <strong className={`subscription-preview-price ${moneyDensityClass(amountLabel)}`.trim()} title={amountLabel}>{amountLabel}</strong><CaretRight size={16} weight="bold" aria-hidden="true" />
             </button>
           );
@@ -991,10 +1039,10 @@ function SubscriptionsView({ subscriptions, totals, today, onAdd, onEdit, onTogg
   onDelete: (id: string) => void;
   onRecordPayment: (id: string) => void;
 }) {
-  const { c, formatCurrency, formatDate, plural, t } = useI18n();
+  const { c, formatDate, locale, localeTag, plural, t } = useI18n();
   const sorted = [...subscriptions].sort((a, b) => a.nextRenewal.localeCompare(b.nextRenewal));
-  const monthlyLabel = formatCurrency(totals.monthly);
-  const annualLabel = formatCurrency(totals.annual);
+  const monthlyLabel = formatSubscriptionTotals(totals, 'monthly', localeTag);
+  const annualLabel = formatSubscriptionTotals(totals, 'annual', localeTag);
   return (
     <div className="subscriptions-view">
       <section className="subscription-summary surface-raised">
@@ -1007,16 +1055,18 @@ function SubscriptionsView({ subscriptions, totals, today, onAdd, onEdit, onTogg
         <div className="subscription-management-list">
           {sorted.map((item) => {
             const relativeDays = dateOnlyDayDifference(today, item.nextRenewal);
-            const amountLabel = formatCurrency(item.amount);
+            const amountLabel = formatSubscriptionMoney(item.amount, item.currency, localeTag);
+            const catalogPlan = findCatalogPlan(item.serviceId, item.planId);
+            const planLabel = catalogPlan ? catalogPlanLabel(catalogPlan, locale) : item.planKey ? c.demo.plans[item.planKey] : item.plan;
             return (
               <article className={`subscription-management-row ${item.status === 'paused' ? 'is-paused' : ''}`} key={item.id}>
-                <ServiceIcon name={item.name} monogram={item.monogram} tone={item.tone} large />
-                <span className="subscription-main"><strong>{item.name}</strong>{(item.planKey || item.plan) && <small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small>}</span>
+                <ServiceIcon serviceId={item.serviceId} name={item.name} monogram={item.monogram} tone={item.tone} large />
+                <span className="subscription-main"><strong>{item.name}</strong>{planLabel && <small>{planLabel}</small>}</span>
                 <span className={`status-label status-${item.status}`}>{c.subscriptions.status[item.status]}</span>
                 <span className={`subscription-date ${relativeDays < 0 ? 'is-overdue' : ''}`}><strong>{formatDate(item.nextRenewal)}</strong><small>{renewalLabel(item.nextRenewal, today, c, plural)}</small></span>
                 <span className="subscription-price"><strong className={moneyDensityClass(amountLabel)} title={amountLabel}>{amountLabel}</strong><small>{item.cycle === 'year' ? c.subscriptions.cycle.perYear : c.subscriptions.cycle.perMonth}</small></span>
                 <div className="management-actions">
-                  <button type="button" disabled={item.status === 'paused'} onClick={() => onRecordPayment(item.id)} aria-label={t('subscriptions.recordPaymentAria', { name: item.name })} title={c.subscriptions.recordPayment}><CheckCircle size={18} weight="bold" aria-hidden="true" /></button>
+                  <button type="button" disabled={item.status === 'paused' || item.currency !== 'VND'} onClick={() => onRecordPayment(item.id)} aria-label={t('subscriptions.recordPaymentAria', { name: item.name })} title={item.currency === 'VND' ? c.subscriptions.recordPayment : c.subscriptions.recordPaymentVndOnly}><CheckCircle size={18} weight="bold" aria-hidden="true" /></button>
                   <button type="button" onClick={() => onEdit(item)} aria-label={t('subscriptions.editAria', { name: item.name })} title={c.common.edit}><PencilSimple size={18} weight="bold" aria-hidden="true" /></button>
                   <button type="button" onClick={() => onToggle(item.id)} aria-label={t(item.status === 'paused' ? 'subscriptions.resumeAria' : 'subscriptions.pauseAria', { name: item.name })}>{item.status === 'paused' ? <Play size={18} weight="bold" aria-hidden="true" /> : <Pause size={18} weight="bold" aria-hidden="true" />}</button>
                   <button type="button" onClick={() => onDelete(item.id)} aria-label={t('subscriptions.deleteAria', { name: item.name })} title={c.common.delete}><Trash size={18} weight="bold" aria-hidden="true" /></button>
@@ -1170,34 +1220,171 @@ function TransactionSheet({ initial, today, customCategories, onClose, onSave }:
 }
 
 function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subscription; today: string; onClose: () => void; onSave: (input: SubscriptionInput, existing?: Subscription) => void }) {
-  const { c, currencySymbol, t } = useI18n();
+  const { c, formatDate, locale, localeTag, t } = useI18n();
   const formRef = useRef<HTMLFormElement>(null);
+  const inferredService = findCatalogServiceById(initial?.serviceId) ?? (initial ? findCatalogServiceByName(initial.name) : undefined);
+  const inferredPlan = inferredService?.plans.find((candidate) => (
+    initial !== undefined
+    && candidate.amount === initial.amount
+    && candidate.currency === initial.currency
+    && candidate.cycle === initial.cycle
+    && (initial.planId === undefined || candidate.id === initial.planId)
+  ));
+  const [serviceChoice, setServiceChoice] = useState(
+    initial ? inferredService?.id ?? MANUAL_SERVICE_ID : '',
+  );
+  const [planChoice, setPlanChoice] = useState(
+    inferredPlan?.id ?? (initial ? MANUAL_PLAN_ID : ''),
+  );
   const [name, setName] = useState(initial?.name ?? '');
   const [plan, setPlan] = useState(initial?.planKey ? c.demo.plans[initial.planKey] : initial?.plan ?? '');
   const [amount, setAmount] = useState(initial ? String(initial.amount) : '');
+  const [currency, setCurrency] = useState<SubscriptionCurrency>(initial?.currency ?? 'VND');
   const [cycle, setCycle] = useState<BillingCycle>(initial?.cycle ?? 'month');
   const [nextRenewal, setNextRenewal] = useState(initial?.nextRenewal ?? addDaysDateOnly(today, 7));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const selectedService = findCatalogServiceById(serviceChoice);
+  const selectedPlan = findCatalogPlan(serviceChoice, planChoice);
+  const isManualService = serviceChoice === MANUAL_SERVICE_ID;
+  const usesManualPrice = isManualService || planChoice === MANUAL_PLAN_ID || (selectedPlan !== undefined && !catalogPlanCanAutofill(selectedPlan));
+  const priceNotice = selectedService ? catalogPriceNotice(selectedService, locale) : undefined;
+
+  function chooseService(value: string) {
+    setServiceChoice(value);
+    setErrors((current) => ({ ...current, serviceChoice: '', name: '', planChoice: '' }));
+    if (value === MANUAL_SERVICE_ID) {
+      setPlanChoice(MANUAL_PLAN_ID);
+      setName('');
+      setPlan('');
+      setAmount('');
+      return;
+    }
+    const service = findCatalogServiceById(value);
+    if (!service) {
+      setPlanChoice('');
+      return;
+    }
+    setName(service.name);
+    setPlan('');
+    setAmount('');
+    const onlyPlan = service.plans.length === 1 ? service.plans[0] : undefined;
+    setPlanChoice(onlyPlan?.id ?? (service.plans.length === 0 ? MANUAL_PLAN_ID : ''));
+    if (onlyPlan && !catalogPlanCanAutofill(onlyPlan)) {
+      setPlan(onlyPlan.label);
+      setAmount(String(onlyPlan.amount));
+      setCurrency(onlyPlan.currency);
+      setCycle(onlyPlan.cycle);
+    }
+  }
+
+  function choosePlan(value: string) {
+    setPlanChoice(value);
+    setErrors((current) => ({ ...current, planChoice: '', amount: '' }));
+    const candidate = selectedService?.plans.find((item) => item.id === value);
+    if (candidate && !catalogPlanCanAutofill(candidate)) {
+      setPlan(candidate.label);
+      setAmount(String(candidate.amount));
+      setCurrency(candidate.currency);
+      setCycle(candidate.cycle);
+      return;
+    }
+    setPlan('');
+    setAmount('');
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
-    const numericAmount = Number(amount);
+    const catalogSelection = selectedService && selectedPlan && !usesManualPrice ? selectedPlan : undefined;
+    const finalName = selectedService?.name ?? name.trim();
+    const finalPlan = catalogSelection?.label ?? selectedPlan?.label ?? plan.trim();
+    const numericAmount = catalogSelection?.amount ?? Number(amount);
+    const finalCurrency = catalogSelection?.currency ?? currency;
+    const finalCycle = catalogSelection?.cycle ?? cycle;
     const nextErrors: Record<string, string> = {};
-    if (!name.trim()) nextErrors.name = c.validation.serviceName;
+    if (!serviceChoice) nextErrors.serviceChoice = c.validation.serviceChoice;
+    if (isManualService && !name.trim()) nextErrors.name = c.validation.serviceName;
+    if (selectedService && selectedService.plans.length > 0 && !planChoice) nextErrors.planChoice = c.validation.subscriptionPlan;
     if (!numericAmount || numericAmount <= 0) nextErrors.amount = c.validation.positiveAmount;
-    else if (!isSafeAmount(numericAmount)) nextErrors.amount = c.validation.unsafeAmount;
+    else if (!isSafeSubscriptionAmount(numericAmount, finalCurrency)) nextErrors.amount = c.validation.unsafeAmount;
     if (!nextRenewal) nextErrors.nextRenewal = c.validation.renewalDate;
     else if (!initial && nextRenewal < today) nextErrors.nextRenewal = c.validation.renewalPast;
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) { focusFirstInvalid(formRef.current); return; }
-    onSave({ name: name.trim(), plan: plan.trim(), amount: numericAmount, cycle, nextRenewal }, initial);
+    onSave({
+      serviceId: selectedService?.id,
+      planId: selectedPlan?.id,
+      name: finalName,
+      plan: finalPlan,
+      amount: numericAmount,
+      currency: finalCurrency,
+      cycle: finalCycle,
+      nextRenewal,
+    }, initial);
     onClose();
   }
+
+  const displayedPrice = selectedPlan
+    ? formatSubscriptionMoney(selectedPlan.amount, selectedPlan.currency, localeTag)
+    : undefined;
+  const displayedPlanNote = selectedPlan ? catalogPlanNote(selectedPlan, locale) : undefined;
+  const selectedServiceName = selectedService?.name ?? name;
+
   return (
     <SheetFrame title={initial ? c.subscriptionForm.editTitle : c.subscriptionForm.title} subtitle={initial ? c.subscriptionForm.editSubtitle : c.subscriptionForm.subtitle} labelledBy="subscription-sheet-title" onClose={onClose}>
       <form ref={formRef} onSubmit={submit} noValidate>
-        <label className="field"><span>{c.subscriptionForm.serviceName}</span><div className="service-name-input"><ServiceIcon name={name} monogram={name.trim().slice(0, 1).toUpperCase() || '?'} tone="graphite" /><input autoFocus list="tally-service-suggestions" value={name} onChange={(event) => setName(event.target.value)} placeholder={c.subscriptionForm.servicePlaceholder} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'subscription-name-error' : undefined} /></div><datalist id="tally-service-suggestions">{SERVICE_SUGGESTIONS.map((service) => <option value={service} key={service} />)}</datalist>{errors.name && <small id="subscription-name-error" className="field-error" role="alert">{errors.name}</small>}</label>
-        <label className="field"><span>{c.subscriptionForm.plan}</span><input value={plan} onChange={(event) => setPlan(event.target.value)} placeholder={c.subscriptionForm.planPlaceholder} /></label>
-        <div className="split-fields"><label className="field"><span>{c.subscriptionForm.cost}</span><div className="money-input"><input inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value.replace(/\D/g, ''))} placeholder="0" aria-invalid={Boolean(errors.amount)} aria-describedby={errors.amount ? 'subscription-amount-error' : undefined} /><strong>{currencySymbol}</strong></div>{errors.amount && <small id="subscription-amount-error" className="field-error" role="alert">{errors.amount}</small>}</label><label className="field"><span>{c.subscriptionForm.cycle.label}</span><select value={cycle} onChange={(event) => setCycle(event.target.value as BillingCycle)}><option value="month">{c.subscriptionForm.cycle.month}</option><option value="year">{c.subscriptionForm.cycle.year}</option></select></label></div>
+        <label className="field">
+          <span>{c.subscriptionForm.serviceName}</span>
+          <div className="catalog-select-shell">
+            <ServiceIcon serviceId={selectedService?.id} name={selectedServiceName} monogram={selectedServiceName.trim().slice(0, 1).toUpperCase() || '?'} tone="graphite" />
+            <select autoFocus value={serviceChoice} onChange={(event) => chooseService(event.target.value)} aria-invalid={Boolean(errors.serviceChoice)} aria-describedby={errors.serviceChoice ? 'subscription-service-error' : undefined}>
+              <option value="">{c.subscriptionForm.chooseService}</option>
+              {SUBSCRIPTION_CATALOG.map((service) => <option value={service.id} key={service.id}>{service.name}</option>)}
+              <option value={MANUAL_SERVICE_ID}>{c.subscriptionForm.manualService}</option>
+            </select>
+          </div>
+          {errors.serviceChoice && <small id="subscription-service-error" className="field-error" role="alert">{errors.serviceChoice}</small>}
+        </label>
+
+        {isManualService && (
+          <label className="field"><span>{c.subscriptionForm.customServiceName}</span><input value={name} onChange={(event) => { setName(event.target.value); setErrors((current) => ({ ...current, name: '' })); }} placeholder={c.subscriptionForm.servicePlaceholder} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'subscription-name-error' : undefined} />{errors.name && <small id="subscription-name-error" className="field-error" role="alert">{errors.name}</small>}</label>
+        )}
+
+        {selectedService && (
+          <label className="field">
+            <span>{c.subscriptionForm.plan}</span>
+            <select value={planChoice} onChange={(event) => choosePlan(event.target.value)} aria-invalid={Boolean(errors.planChoice)} aria-describedby={errors.planChoice ? 'subscription-plan-error' : undefined}>
+              {selectedService.plans.length > 0 && <option value="">{c.subscriptionForm.choosePlan}</option>}
+              {selectedService.plans.map((candidate) => <option value={candidate.id} key={candidate.id}>{catalogPlanLabel(candidate, locale)}</option>)}
+              <option value={MANUAL_PLAN_ID}>{c.subscriptionForm.manualPlan}</option>
+            </select>
+            {errors.planChoice && <small id="subscription-plan-error" className="field-error" role="alert">{errors.planChoice}</small>}
+          </label>
+        )}
+
+        {selectedPlan && displayedPrice && (
+          <section className="catalog-price-card" aria-label={c.subscriptionForm.verifiedPrice}>
+            <div><span>{c.subscriptionForm.verifiedPrice}</span><strong>{displayedPrice}</strong><small>{selectedPlan.cycle === 'year' ? c.subscriptionForm.cycle.year : c.subscriptionForm.cycle.month}</small></div>
+            <a href={selectedPlan.sourceUrl} target="_blank" rel="noreferrer" aria-label={c.subscriptionForm.openPriceSource}>
+              <ArrowSquareOut size={18} weight="bold" aria-hidden="true" />
+              <span>{selectedPlan.channel === 'app-store' ? c.subscriptionForm.sourceAppStore : c.subscriptionForm.sourceWeb}</span>
+            </a>
+            <p>{t('subscriptionForm.checkedOn', { date: formatDate(selectedPlan.checkedAt) })}{displayedPlanNote ? ` · ${displayedPlanNote}` : ''}</p>
+          </section>
+        )}
+
+        {priceNotice && <div className="catalog-price-notice" role="note"><WarningCircle size={18} weight="fill" aria-hidden="true" /><span>{priceNotice}</span></div>}
+
+        {usesManualPrice && serviceChoice && (
+          <div className="manual-plan-fields">
+            {!selectedPlan && <label className="field"><span>{c.subscriptionForm.customPlanName}</span><input value={plan} onChange={(event) => setPlan(event.target.value)} placeholder={c.subscriptionForm.planPlaceholder} /></label>}
+            <div className="split-fields">
+              <label className="field"><span>{c.subscriptionForm.cost}</span><div className="money-input"><input inputMode="decimal" value={amount} onChange={(event) => { const cleaned = event.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1'); setAmount(currency === 'VND' || currency === 'JPY' || currency === 'KRW' ? cleaned.replace(/\..*$/, '') : cleaned); }} placeholder="0" aria-invalid={Boolean(errors.amount)} aria-describedby={errors.amount ? 'subscription-amount-error' : undefined} /><strong>{currency}</strong></div>{errors.amount && <small id="subscription-amount-error" className="field-error" role="alert">{errors.amount}</small>}</label>
+              <label className="field"><span>{c.subscriptionForm.currency}</span><select value={currency} onChange={(event) => { const nextCurrency = event.target.value as SubscriptionCurrency; setCurrency(nextCurrency); if (nextCurrency === 'VND' || nextCurrency === 'JPY' || nextCurrency === 'KRW') setAmount((current) => current.replace(/\..*$/, '')); }}>{(['VND', 'USD', 'EUR', 'GBP', 'JPY', 'KRW', 'SGD', 'THB', 'AUD', 'CAD'] as const).map((code) => <option value={code} key={code}>{code}</option>)}</select></label>
+            </div>
+            <label className="field"><span>{c.subscriptionForm.cycle.label}</span><select value={cycle} onChange={(event) => setCycle(event.target.value as BillingCycle)}><option value="month">{c.subscriptionForm.cycle.month}</option><option value="year">{c.subscriptionForm.cycle.year}</option></select></label>
+          </div>
+        )}
+
         <label className="field"><span>{c.subscriptionForm.renewalDate}</span><input type="date" min={initial ? undefined : today} value={nextRenewal} onChange={(event) => setNextRenewal(event.target.value)} aria-invalid={Boolean(errors.nextRenewal)} aria-describedby={errors.nextRenewal ? 'subscription-renewal-error' : undefined} />{errors.nextRenewal && <small id="subscription-renewal-error" className="field-error" role="alert">{errors.nextRenewal}</small>}</label>
         <div className="info-callout"><CalendarBlank size={20} weight="regular" aria-hidden="true" /><span>{t('subscriptionForm.callout', { appName: APP_NAME })}</span></div>
         <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{initial ? c.subscriptionForm.update : c.subscriptionForm.save}</button></div>

@@ -138,13 +138,12 @@ export function CategoryPicker({
       {isOpen && (
         <section id={panelId} className="category-picker-panel" aria-label={c.categoryPicker.title}>
           <header className="category-picker-header">
-            <strong>{isCreating ? c.categoryPicker.createCustom : c.categoryPicker.title}</strong>
+            <strong>{isCreating ? c.categoryPicker.customTitle : c.categoryPicker.title}</strong>
             <button type="button" onClick={() => setIsOpen(false)} aria-label={c.common.close}><X size={18} weight="bold" aria-hidden="true" /></button>
           </header>
 
           {isCreating ? (
             <div className="custom-category-editor">
-              <p>{c.categoryPicker.customHelp}</p>
               <label className="field"><span>{c.categoryPicker.customName}</span><input value={customName} onChange={(event) => { setCustomName(event.target.value); setCustomError(''); }} maxLength={40} placeholder={c.categoryPicker.customNamePlaceholder} aria-invalid={Boolean(customError)} aria-describedby={customError ? `${panelId}-custom-error` : undefined} />{customError && <small id={`${panelId}-custom-error`} className="field-error" role="alert">{customError}</small>}</label>
               <fieldset className="custom-icon-picker"><legend>{c.categoryPicker.customIcon}</legend><div>{CUSTOM_CATEGORY_ICON_IDS.map((icon, index) => <button key={icon} type="button" className={customIcon === icon ? 'is-selected' : ''} onClick={() => setCustomIcon(icon)} aria-pressed={customIcon === icon} aria-label={t('categoryPicker.iconOption', { number: index + 1 })}><CategoryIcon icon={icon} size={20} weight={customIcon === icon ? 'fill' : 'regular'} aria-hidden="true" /></button>)}</div></fieldset>
               <div className="custom-category-actions"><button type="button" className="cancel-action" onClick={() => setIsCreating(false)}>{c.categoryPicker.back}</button><button type="button" className="primary-action" onClick={saveCustom}>{c.categoryPicker.saveCustom}</button></div>
@@ -161,7 +160,7 @@ export function CategoryPicker({
                 })}
                 {matches.length === 0 && matchingCustom.length === 0 && <p className="category-no-results">{c.categoryPicker.noResults}</p>}
               </div>
-              <button type="button" className="category-custom-action" onClick={startCreating}><Plus size={18} weight="bold" aria-hidden="true" /><span><strong>{c.categoryPicker.createCustom}</strong><small>{c.categoryPicker.customHelp}</small></span></button>
+              <button type="button" className="category-custom-action" onClick={startCreating}><Plus size={18} weight="bold" aria-hidden="true" /><strong>{c.categoryPicker.createCustom}</strong></button>
             </>
           )}
         </section>

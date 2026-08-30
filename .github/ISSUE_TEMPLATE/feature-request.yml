@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest a focused improvement to Tally
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the user need before proposing an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should a user be able to do when this is complete?
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Local-first, privacy, or accessibility considerations
+      description: Note any effect on persistence, personal data, EN/VI copy, keyboard use, or responsive layouts.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for a similar request.
+          required: true
+        - label: This request does not include real personal finance data.
+          required: true
