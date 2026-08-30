@@ -4,7 +4,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   ArrowsDownUp,
-  Bank,
   CalendarBlank,
   CaretRight,
   ChartDonut,
@@ -13,7 +12,6 @@ import {
   CreditCard,
   DotsThree,
   DownloadSimple,
-  ForkKnife,
   GearSix,
   House,
   MagnifyingGlass,
@@ -24,7 +22,6 @@ import {
   Plus,
   Receipt,
   ShieldCheck,
-  ShoppingCart,
   Sun,
   Trash,
   TrendUp,
@@ -55,7 +52,7 @@ import {
   useState,
 } from 'react';
 import {
-  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_DEFINITIONS,
   FINANCE_STORAGE_KEY,
   addDaysDateOnly,
   createDemoData,
@@ -73,14 +70,17 @@ import {
   type BillingCycle,
   type Budget,
   type CashflowPeriod,
-  type CategoryId,
+  type CustomExpenseCategory,
   type ExpenseCategoryId,
   type FinanceData,
   type Subscription,
   type Transaction,
 } from './finance-domain';
+import { CategoryIcon } from './category-icons';
+import { CategoryPicker, expenseCategoryIcon, expenseCategoryLabel } from './category-picker';
 import { APP_NAME, I18nProvider, useI18n, type Locale } from './i18n';
 import { VIEW_ORDER, viewDirection as getViewDirection, viewFromHashValue, type View } from './navigation';
+import { SERVICE_SUGGESTIONS, ServiceIcon } from './service-icons';
 
 type Theme = 'light' | 'dark';
 type TransactionType = 'income' | 'expense';
@@ -99,6 +99,7 @@ type TransactionInput = {
   date: string;
   amount: number;
   type: TransactionType;
+  customCategory?: CustomExpenseCategory;
 };
 type SubscriptionInput = {
   name: string;
@@ -107,7 +108,7 @@ type SubscriptionInput = {
   cycle: BillingCycle;
   nextRenewal: string;
 };
-type BudgetInput = { category: ExpenseCategoryId; limit: number };
+type BudgetInput = { category: ExpenseCategoryId; limit: number; customCategory?: CustomExpenseCategory };
 
 const renewalOrbitPoints: Record<number, ReadonlyArray<{ x: number; y: number }>> = {
   1: [{ x: 142, y: 80 }],
@@ -138,14 +139,6 @@ const viewMotionVariants: Variants = {
 };
 
 const serviceTones: Subscription['tone'][] = ['blue', 'green', 'graphite', 'violet', 'red'];
-
-function categoryIcon(category: CategoryId) {
-  if (category === 'income') return Bank;
-  if (category === 'dining') return ForkKnife;
-  if (category === 'shopping') return ShoppingCart;
-  if (category === 'bills') return Receipt;
-  return ArrowsDownUp;
-}
 
 function dateReference(value: string) {
   return new Date(`${value}T12:00:00`);
@@ -234,7 +227,7 @@ function AppLoadingShell({ label }: { label: string }) {
 }
 
 function LanguageSwitch({ mobile = false }: { mobile?: boolean }) {
-  const { locale, setLocale, c } = useI18n();
+  const { locale, setLocale, c, t } = useI18n();
   if (mobile) {
     const nextLocale: Locale = locale === 'en' ? 'vi' : 'en';
     return (
@@ -242,7 +235,7 @@ function LanguageSwitch({ mobile = false }: { mobile?: boolean }) {
         className="mobile-language-toggle"
         type="button"
         onClick={() => setLocale(nextLocale)}
-        aria-label={`${c.language.changeAria}: ${c.language[nextLocale]}`}
+        aria-label={t('language.switchTo', { language: c.language[nextLocale] })}
         title={c.language[nextLocale]}
       >
         {locale.toUpperCase()}
@@ -366,7 +359,7 @@ function AppContent() {
         const parsed = parseFinanceData(raw);
         if (parsed.status === 'ok') {
           nextData = parsed.data;
-          lastPersistedPayloadRef.current = serializeFinanceData(parsed.data);
+          lastPersistedPayloadRef.current = parsed.migrated ? raw : serializeFinanceData(parsed.data);
           setStorageStatus('saved');
         } else if (parsed.status === 'future-version') {
           setStorageStatus('future');
@@ -414,7 +407,7 @@ function AppContent() {
       if (event.key !== FINANCE_STORAGE_KEY || !event.newValue) return;
       const parsed = parseFinanceData(event.newValue);
       if (parsed.status === 'ok') {
-        lastPersistedPayloadRef.current = serializeFinanceData(parsed.data);
+        lastPersistedPayloadRef.current = parsed.migrated ? event.newValue : serializeFinanceData(parsed.data);
         setData(parsed.data);
         setStorageStatus('saved');
       }
@@ -513,6 +506,9 @@ function AppContent() {
     };
     updateData((current) => ({
       ...current,
+      customCategories: input.customCategory && !current.customCategories.some((item) => item.id === input.customCategory?.id)
+        ? [...current.customCategories, input.customCategory]
+        : current.customCategories,
       transactions: existing
         ? current.transactions.map((item) => item.id === existing.id ? transaction : item)
         : [...current.transactions, transaction],
@@ -559,6 +555,9 @@ function AppContent() {
   }
 
   function toggleSubscription(id: string) {
+    const subscription = data.subscriptions.find((item) => item.id === id);
+    if (!subscription) return;
+    const willResume = subscription.status === 'paused';
     updateData((current) => ({
       ...current,
       subscriptions: current.subscriptions.map((item) => {
@@ -567,7 +566,7 @@ function AppContent() {
         return { ...item, previousStatus: item.status, status: 'paused' };
       }),
     }));
-    showToast(c.toast.trackingUpdated);
+    showToast(t(willResume ? 'toast.trackingResumed' : 'toast.trackingPaused', { name: subscription.name }));
   }
 
   function deleteSubscription(id: string) {
@@ -589,6 +588,9 @@ function AppContent() {
     const budget: Budget = { id: existing?.id ?? createId('budget'), category: input.category, limit: input.limit };
     updateData((current) => ({
       ...current,
+      customCategories: input.customCategory && !current.customCategories.some((item) => item.id === input.customCategory?.id)
+        ? [...current.customCategories, input.customCategory]
+        : current.customCategories,
       budgets: existing
         ? current.budgets.map((item) => item.id === existing.id ? budget : item)
         : [...current.budgets, budget],
@@ -633,11 +635,11 @@ function AppContent() {
         ? c.storage.error
         : null;
   const activeDialog = dialog?.kind === 'transaction'
-    ? <TransactionSheet key={`transaction-${dialog.item?.id ?? 'new'}`} initial={dialog.item} today={today} onClose={closeDialog} onSave={saveTransaction} />
+    ? <TransactionSheet key={`transaction-${dialog.item?.id ?? 'new'}`} initial={dialog.item} today={today} customCategories={data.customCategories} onClose={closeDialog} onSave={saveTransaction} />
     : dialog?.kind === 'subscription'
       ? <SubscriptionSheet key={`subscription-${dialog.item?.id ?? 'new'}`} initial={dialog.item} today={today} onClose={closeDialog} onSave={saveSubscription} />
       : dialog?.kind === 'budget'
-        ? <BudgetSheet key={`budget-${dialog.item?.id ?? 'new'}`} initial={dialog.item} budgets={data.budgets} onClose={closeDialog} onSave={saveBudget} />
+        ? <BudgetSheet key={`budget-${dialog.item?.id ?? 'new'}`} initial={dialog.item} budgets={data.budgets} customCategories={data.customCategories} onClose={closeDialog} onSave={saveBudget} />
         : dialog?.kind === 'settings'
           ? (
               <SettingsSheet
@@ -695,7 +697,7 @@ function AppContent() {
 
         <header className="page-header">
           <div>
-            <h1 className="desktop-greeting" data-page-focus tabIndex={-1}>{c.header.greeting}</h1>
+            <h1 className="desktop-greeting" data-page-focus tabIndex={-1}>{c.nav[view]}</h1>
             <div className="mobile-title-row"><PageIcon view={view} /><h1 id={`page-title-${view}`} data-page-focus tabIndex={-1}>{c.nav[view]}</h1></div>
             <p className="page-context">{c.header.context[view]}</p>
           </div>
@@ -719,12 +721,13 @@ function AppContent() {
                   transactions={transactions}
                   subscriptions={activeSubscriptions}
                   subscriptionMonthlyTotal={subscriptionTotals.monthly}
+                  customCategories={data.customCategories}
                   today={today}
                   onNavigate={navigate}
                   onAddTransaction={() => openDialog({ kind: 'transaction' })}
                 />
               )}
-              {view === 'transactions' && <TransactionsView transactions={transactions} onDelete={deleteTransaction} onEdit={(item) => openDialog({ kind: 'transaction', item })} onAdd={() => openDialog({ kind: 'transaction' })} />}
+              {view === 'transactions' && <TransactionsView transactions={transactions} customCategories={data.customCategories} onDelete={deleteTransaction} onEdit={(item) => openDialog({ kind: 'transaction', item })} onAdd={() => openDialog({ kind: 'transaction' })} />}
               {view === 'subscriptions' && (
                 <SubscriptionsView
                   subscriptions={data.subscriptions}
@@ -737,7 +740,7 @@ function AppContent() {
                   onRecordPayment={recordPayment}
                 />
               )}
-              {view === 'budgets' && <BudgetsView usage={budgetUsage} today={today} onAdd={() => openDialog({ kind: 'budget' })} onEdit={(item) => openDialog({ kind: 'budget', item })} onDelete={deleteBudget} />}
+              {view === 'budgets' && <BudgetsView usage={budgetUsage} customCategories={data.customCategories} today={today} onAdd={() => openDialog({ kind: 'budget' })} onEdit={(item) => openDialog({ kind: 'budget', item })} onDelete={deleteBudget} />}
             </m.div>
           </AnimatePresence>
         </div>
@@ -774,11 +777,12 @@ function AppContent() {
   );
 }
 
-function Overview({ summary, transactions, subscriptions, subscriptionMonthlyTotal, today, onNavigate, onAddTransaction }: {
+function Overview({ summary, transactions, subscriptions, subscriptionMonthlyTotal, customCategories, today, onNavigate, onAddTransaction }: {
   summary: ReturnType<typeof deriveFinanceSummary>;
   transactions: Transaction[];
   subscriptions: Subscription[];
   subscriptionMonthlyTotal: number;
+  customCategories: CustomExpenseCategory[];
   today: string;
   onNavigate: (view: View) => void;
   onAddTransaction: () => void;
@@ -805,7 +809,7 @@ function Overview({ summary, transactions, subscriptions, subscriptionMonthlyTot
         <CashflowPanel transactions={transactions} today={today} period={period} onPeriodChange={setPeriod} />
         <section className="activity-panel surface-raised">
           <div className="section-heading"><h2>{c.overview.recentTransactions}</h2><button type="button" className="quiet-link" onClick={() => onNavigate('transactions')}>{c.overview.viewAll} <CaretRight size={14} weight="bold" aria-hidden="true" /></button></div>
-          <TransactionList transactions={transactions.slice(0, 3)} compact />
+          <TransactionList transactions={transactions.slice(0, 3)} customCategories={customCategories} compact />
           <button className="mobile-inline-action" type="button" onClick={onAddTransaction}><Plus size={18} weight="bold" aria-hidden="true" /> {c.actions.addTransaction}</button>
         </section>
       </div>
@@ -870,7 +874,7 @@ function RenewalSchedule({ subscriptions, today, onOpen, className = '' }: { sub
 }
 
 function CashflowPanel({ transactions, today, period, onPeriodChange }: { transactions: Transaction[]; today: string; period: CashflowPeriod; onPeriodChange: (period: CashflowPeriod) => void }) {
-  const { c, formatCompactNumber, formatCurrency, localeTag } = useI18n();
+  const { c, formatCompactNumber, formatCurrency, localeTag, t } = useI18n();
   const options: Array<{ id: CashflowPeriod; label: string }> = [
     { id: '7d', label: c.cashflow.period.sevenDays },
     { id: '30d', label: c.cashflow.period.thirtyDays },
@@ -895,7 +899,7 @@ function CashflowPanel({ transactions, today, period, onPeriodChange }: { transa
         <div className="segmented-control" role="group" aria-label={c.cashflow.rangeAria}>{options.map((option) => <button key={option.id} type="button" className={period === option.id ? 'is-active' : ''} onClick={() => onPeriodChange(option.id)} aria-pressed={period === option.id}>{option.label}</button>)}</div>
       </div>
       <div className="chart-scale" aria-hidden="true"><span>{formatCompactNumber(scale)}</span><span>0</span><span>-{formatCompactNumber(scale)}</span></div>
-      <div className="cashflow-chart" style={{ gridTemplateColumns: `repeat(${points.length}, minmax(3px, 1fr))` }} role="img" aria-label={`${c.cashflow.chartAria} ${formatCurrency(net)}`}>
+      <div className="cashflow-chart" style={{ gridTemplateColumns: `repeat(${points.length}, minmax(3px, 1fr))` }} role="img" aria-label={t('cashflow.chartAria', { net: formatCurrency(net) })}>
         <span className="zero-line" aria-hidden="true" />
         {values.map((point, index) => <span className="chart-column" key={points[index].key}><i className={point >= 0 ? 'bar-positive' : 'bar-negative'} style={{ height: `${point === 0 ? 2 : Math.max(8, Math.round((Math.abs(point) / maxMagnitude) * 68))}px` }} /></span>)}
       </div>
@@ -916,8 +920,8 @@ function SubscriptionOverview({ subscriptions, monthlyTotal, today, onOpen }: { 
           const amountLabel = formatCurrency(item.amount);
           return (
             <button className="subscription-preview-row" type="button" onClick={onOpen} key={item.id}>
-              <span className={`service-mark ${item.tone}`} aria-hidden="true">{item.monogram}</span>
-              <span className="subscription-preview-copy"><strong>{item.name}</strong><small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small></span>
+              <ServiceIcon name={item.name} monogram={item.monogram} tone={item.tone} />
+              <span className="subscription-preview-copy"><strong>{item.name}</strong>{(item.planKey || item.plan) && <small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small>}</span>
               <strong className={`subscription-preview-price ${moneyDensityClass(amountLabel)}`.trim()} title={amountLabel}>{amountLabel}</strong><CaretRight size={16} weight="bold" aria-hidden="true" />
             </button>
           );
@@ -929,19 +933,19 @@ function SubscriptionOverview({ subscriptions, monthlyTotal, today, onOpen }: { 
   );
 }
 
-function TransactionList({ transactions, compact = false, onDelete, onEdit }: { transactions: Transaction[]; compact?: boolean; onDelete?: (id: string) => void; onEdit?: (item: Transaction) => void }) {
+function TransactionList({ transactions, customCategories, compact = false, onDelete, onEdit }: { transactions: Transaction[]; customCategories: CustomExpenseCategory[]; compact?: boolean; onDelete?: (id: string) => void; onEdit?: (item: Transaction) => void }) {
   const { c, formatCurrency, formatDate, t } = useI18n();
   if (transactions.length === 0) return <div className="empty-state"><Receipt size={28} weight="duotone" aria-hidden="true" /><strong>{c.transactions.emptyTitle}</strong><span>{c.transactions.emptyBody}</span></div>;
   return (
     <div className={`transaction-list ${compact ? 'is-compact' : ''}`}>
       {transactions.map((transaction) => {
-        const Icon = categoryIcon(transaction.category);
         const title = transaction.titleKey ? c.demo.transactions[transaction.titleKey] : transaction.title;
+        const categoryLabel = transaction.category === 'income' ? c.categories.income : expenseCategoryLabel(c, transaction.category, customCategories);
         const amountLabel = `${transaction.amount > 0 ? '+' : ''}${formatCurrency(transaction.amount)}`;
         return (
           <article className="transaction-row" key={transaction.id}>
-            <span className={`transaction-icon ${transaction.amount > 0 ? 'is-income' : ''}`}><Icon size={19} weight="regular" aria-hidden="true" /></span>
-            <span className="transaction-copy"><strong>{title}</strong><small>{c.categories[transaction.category]}</small></span>
+            <span className={`transaction-icon ${transaction.amount > 0 ? 'is-income' : ''}`}>{transaction.category === 'income' ? <Wallet size={19} weight="regular" aria-hidden="true" /> : <CategoryIcon icon={expenseCategoryIcon(transaction.category, customCategories)} size={19} weight="regular" aria-hidden="true" />}</span>
+            <span className="transaction-copy"><strong>{title}</strong><small>{categoryLabel}</small></span>
             <time dateTime={transaction.date}>{formatDate(transaction.date)}</time>
             <strong className={`transaction-amount ${transaction.amount > 0 ? 'is-positive' : ''} ${moneyDensityClass(amountLabel)}`.trim()} title={amountLabel}>{amountLabel}</strong>
             {(onDelete || onEdit) && <div className="row-actions">{onEdit && <button className="row-action" type="button" onClick={() => onEdit(transaction)} aria-label={t('transactions.editAria', { title })}><PencilSimple size={18} weight="bold" aria-hidden="true" /></button>}{onDelete && <button className="row-action" type="button" onClick={() => onDelete(transaction.id)} aria-label={t('transactions.deleteAria', { title })}><Trash size={18} weight="bold" aria-hidden="true" /></button>}</div>}
@@ -952,13 +956,16 @@ function TransactionList({ transactions, compact = false, onDelete, onEdit }: { 
   );
 }
 
-function TransactionsView({ transactions, onDelete, onEdit, onAdd }: { transactions: Transaction[]; onDelete: (id: string) => void; onEdit: (item: Transaction) => void; onAdd: () => void }) {
+function TransactionsView({ transactions, customCategories, onDelete, onEdit, onAdd }: { transactions: Transaction[]; customCategories: CustomExpenseCategory[]; onDelete: (id: string) => void; onEdit: (item: Transaction) => void; onAdd: () => void }) {
   const { c } = useI18n();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const filtered = transactions.filter((item) => {
     const title = item.titleKey ? c.demo.transactions[item.titleKey] : item.title;
-    const matchesQuery = `${title} ${c.categories[item.category]}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+    const categoryLabel = item.category === 'income' ? c.categories.income : expenseCategoryLabel(c, item.category, customCategories);
+    const haystack = `${title} ${categoryLabel}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLocaleLowerCase();
+    const needle = query.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLocaleLowerCase();
+    const matchesQuery = haystack.includes(needle);
     return matchesQuery && (filter === 'all' || (filter === 'income' ? item.amount > 0 : item.amount < 0));
   });
   return (
@@ -968,7 +975,7 @@ function TransactionsView({ transactions, onDelete, onEdit, onAdd }: { transacti
         <div className="filter-group" role="group" aria-label={c.transactions.filterAria}>{(['all', 'income', 'expense'] as const).map((item) => <button type="button" key={item} className={filter === item ? 'is-active' : ''} onClick={() => setFilter(item)} aria-pressed={filter === item}>{c.transactions.filter[item]}</button>)}</div>
         <button className="secondary-action" type="button" onClick={onAdd}><Plus size={18} weight="bold" aria-hidden="true" /> {c.actions.add}</button>
       </div>
-      <TransactionList transactions={filtered} onDelete={onDelete} onEdit={onEdit} />
+      <TransactionList transactions={filtered} customCategories={customCategories} onDelete={onDelete} onEdit={onEdit} />
       {filtered.length === 0 && transactions.length > 0 && <div className="filter-empty"><MagnifyingGlass size={26} weight="duotone" aria-hidden="true" /><strong>{c.transactions.noResultsTitle}</strong><span>{c.transactions.noResultsBody}</span></div>}
     </section>
   );
@@ -1003,8 +1010,8 @@ function SubscriptionsView({ subscriptions, totals, today, onAdd, onEdit, onTogg
             const amountLabel = formatCurrency(item.amount);
             return (
               <article className={`subscription-management-row ${item.status === 'paused' ? 'is-paused' : ''}`} key={item.id}>
-                <span className={`service-mark large ${item.tone}`} aria-hidden="true">{item.monogram}</span>
-                <span className="subscription-main"><strong>{item.name}</strong><small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small></span>
+                <ServiceIcon name={item.name} monogram={item.monogram} tone={item.tone} large />
+                <span className="subscription-main"><strong>{item.name}</strong>{(item.planKey || item.plan) && <small>{item.planKey ? c.demo.plans[item.planKey] : item.plan}</small>}</span>
                 <span className={`status-label status-${item.status}`}>{c.subscriptions.status[item.status]}</span>
                 <span className={`subscription-date ${relativeDays < 0 ? 'is-overdue' : ''}`}><strong>{formatDate(item.nextRenewal)}</strong><small>{renewalLabel(item.nextRenewal, today, c, plural)}</small></span>
                 <span className="subscription-price"><strong className={moneyDensityClass(amountLabel)} title={amountLabel}>{amountLabel}</strong><small>{item.cycle === 'year' ? c.subscriptions.cycle.perYear : c.subscriptions.cycle.perMonth}</small></span>
@@ -1024,7 +1031,7 @@ function SubscriptionsView({ subscriptions, totals, today, onAdd, onEdit, onTogg
   );
 }
 
-function BudgetsView({ usage, today, onAdd, onEdit, onDelete }: { usage: ReturnType<typeof deriveBudgetUsage>; today: string; onAdd: () => void; onEdit: (item: Budget) => void; onDelete: (id: string) => void }) {
+function BudgetsView({ usage, customCategories, today, onAdd, onEdit, onDelete }: { usage: ReturnType<typeof deriveBudgetUsage>; customCategories: CustomExpenseCategory[]; today: string; onAdd: () => void; onEdit: (item: Budget) => void; onDelete: (id: string) => void }) {
   const { c, formatCurrency, formatMonthYear, formatPercent, t } = useI18n();
   const total = usage.reduce((sum, item) => sum + item.limit, 0);
   const used = usage.reduce((sum, item) => sum + item.spent, 0);
@@ -1046,12 +1053,12 @@ function BudgetsView({ usage, today, onAdd, onEdit, onDelete }: { usage: ReturnT
             const amount = formatCurrency(Math.abs(budget.limit - budget.spent));
             return (
               <article className="budget-row" key={budget.id}>
-                <span className={`budget-icon ${over ? 'is-over' : warning ? 'is-warning' : ''}`}>{over ? <WarningCircle size={20} weight="fill" aria-hidden="true" /> : <Wallet size={20} weight="regular" aria-hidden="true" />}</span>
-                <span className="budget-copy"><strong>{c.categories[budget.category]}</strong><small>{formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}</small></span>
+                <span className={`budget-icon ${over ? 'is-over' : warning ? 'is-warning' : ''}`}><CategoryIcon icon={expenseCategoryIcon(budget.category, customCategories)} size={20} weight="regular" aria-hidden="true" /></span>
+                <span className="budget-copy"><strong>{expenseCategoryLabel(c, budget.category, customCategories)}</strong><small>{formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}</small></span>
                 <span className={`budget-status ${over ? 'is-over' : warning ? 'is-warning' : ''}`}>{t(over ? 'budgets.overBy' : 'budgets.remaining', { amount })}</span>
                 <span className="budget-percentage">{formatPercent(ratio)}</span>
                 <span className="budget-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(percent, 100)} aria-label={t('budgets.usedAria', { percent: formatPercent(ratio) })}><i className={over ? 'is-over' : warning ? 'is-warning' : ''} style={{ width: `${Math.min(percent, 100)}%` }} /></span>
-                <div className="budget-actions"><button type="button" onClick={() => onEdit(budget)} aria-label={t('budgets.editAria', { category: c.categories[budget.category] })}><PencilSimple size={18} weight="bold" aria-hidden="true" /></button><button type="button" onClick={() => onDelete(budget.id)} aria-label={t('budgets.deleteAria', { category: c.categories[budget.category] })}><Trash size={18} weight="bold" aria-hidden="true" /></button></div>
+                <div className="budget-actions"><button type="button" onClick={() => onEdit(budget)} aria-label={t('budgets.editAria', { category: expenseCategoryLabel(c, budget.category, customCategories) })}><PencilSimple size={18} weight="bold" aria-hidden="true" /></button><button type="button" onClick={() => onDelete(budget.id)} aria-label={t('budgets.deleteAria', { category: expenseCategoryLabel(c, budget.category, customCategories) })}><Trash size={18} weight="bold" aria-hidden="true" /></button></div>
               </article>
             );
           })}
@@ -1124,13 +1131,14 @@ function SheetFrame({ title, subtitle, labelledBy, onClose, children, className 
   );
 }
 
-function TransactionSheet({ initial, today, onClose, onSave }: { initial?: Transaction; today: string; onClose: () => void; onSave: (input: TransactionInput, existing?: Transaction) => void }) {
-  const { c } = useI18n();
+function TransactionSheet({ initial, today, customCategories, onClose, onSave }: { initial?: Transaction; today: string; customCategories: CustomExpenseCategory[]; onClose: () => void; onSave: (input: TransactionInput, existing?: Transaction) => void }) {
+  const { c, currencySymbol } = useI18n();
   const formRef = useRef<HTMLFormElement>(null);
   const [type, setType] = useState<TransactionType>(initial?.amount && initial.amount > 0 ? 'income' : 'expense');
   const [title, setTitle] = useState(initial?.titleKey ? c.demo.transactions[initial.titleKey] : initial?.title ?? '');
   const [amount, setAmount] = useState(initial ? String(Math.abs(initial.amount)) : '');
   const [category, setCategory] = useState<ExpenseCategoryId>(initial?.category === 'income' ? 'dining' : initial?.category ?? 'dining');
+  const [pendingCustomCategory, setPendingCustomCategory] = useState<CustomExpenseCategory | undefined>();
   const [date, setDate] = useState(initial?.date ?? today);
   const [errors, setErrors] = useState<Record<string, string>>({});
   function submit(event: FormEvent) {
@@ -1144,7 +1152,7 @@ function TransactionSheet({ initial, today, onClose, onSave }: { initial?: Trans
     else if (date > today) nextErrors.date = c.validation.transactionFuture;
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) { focusFirstInvalid(formRef.current); return; }
-    onSave({ title: title.trim(), amount: numericAmount, category, date, type }, initial);
+    onSave({ title: title.trim(), amount: numericAmount, category, date, type, customCategory: type === 'expense' ? pendingCustomCategory : undefined }, initial);
     onClose();
   }
   return (
@@ -1152,8 +1160,8 @@ function TransactionSheet({ initial, today, onClose, onSave }: { initial?: Trans
       <form ref={formRef} onSubmit={submit} noValidate>
         <div className="type-switch" role="group" aria-label={c.transactionForm.typeAria}><button type="button" className={type === 'expense' ? 'is-active' : ''} onClick={() => setType('expense')} aria-pressed={type === 'expense'}>{c.transactionForm.type.expense}</button><button type="button" className={type === 'income' ? 'is-active' : ''} onClick={() => setType('income')} aria-pressed={type === 'income'}>{c.transactionForm.type.income}</button></div>
         <label className="field"><span>{c.transactionForm.name}</span><input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder={c.transactionForm.namePlaceholder} aria-invalid={Boolean(errors.title)} aria-describedby={errors.title ? 'transaction-title-error' : undefined} />{errors.title && <small id="transaction-title-error" className="field-error" role="alert">{errors.title}</small>}</label>
-        <label className="field"><span>{c.transactionForm.amount}</span><div className="money-input"><input inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value.replace(/\D/g, ''))} placeholder="0" aria-invalid={Boolean(errors.amount)} aria-describedby={errors.amount ? 'transaction-amount-error' : undefined} /><strong>₫</strong></div>{errors.amount && <small id="transaction-amount-error" className="field-error" role="alert">{errors.amount}</small>}</label>
-        {type === 'expense' && <label className="field"><span>{c.transactionForm.category}</span><select value={category} onChange={(event) => setCategory(event.target.value as ExpenseCategoryId)}>{EXPENSE_CATEGORIES.map((item) => <option key={item} value={item}>{c.categories[item]}</option>)}</select></label>}
+        <label className="field"><span>{c.transactionForm.amount}</span><div className="money-input"><input inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value.replace(/\D/g, ''))} placeholder="0" aria-invalid={Boolean(errors.amount)} aria-describedby={errors.amount ? 'transaction-amount-error' : undefined} /><strong>{currencySymbol}</strong></div>{errors.amount && <small id="transaction-amount-error" className="field-error" role="alert">{errors.amount}</small>}</label>
+        {type === 'expense' && <CategoryPicker label={c.transactionForm.category} value={category} customCategories={pendingCustomCategory ? [...customCategories, pendingCustomCategory] : customCategories} onChange={(nextCategory, created) => { setCategory(nextCategory); setPendingCustomCategory((current) => created ?? (current?.id === nextCategory ? current : undefined)); }} />}
         <label className="field"><span>{c.transactionForm.date}</span><input type="date" max={today} value={date} onChange={(event) => setDate(event.target.value)} aria-invalid={Boolean(errors.date)} aria-describedby={errors.date ? 'transaction-date-error' : undefined} />{errors.date && <small id="transaction-date-error" className="field-error" role="alert">{errors.date}</small>}</label>
         <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{initial ? c.transactionForm.update : c.transactionForm.save}</button></div>
       </form>
@@ -1165,7 +1173,7 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
   const { c, currencySymbol, t } = useI18n();
   const formRef = useRef<HTMLFormElement>(null);
   const [name, setName] = useState(initial?.name ?? '');
-  const [plan, setPlan] = useState(initial?.planKey ? c.demo.plans[initial.planKey] : initial?.plan ?? c.demo.plans.personal);
+  const [plan, setPlan] = useState(initial?.planKey ? c.demo.plans[initial.planKey] : initial?.plan ?? '');
   const [amount, setAmount] = useState(initial ? String(initial.amount) : '');
   const [cycle, setCycle] = useState<BillingCycle>(initial?.cycle ?? 'month');
   const [nextRenewal, setNextRenewal] = useState(initial?.nextRenewal ?? addDaysDateOnly(today, 7));
@@ -1181,13 +1189,13 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
     else if (!initial && nextRenewal < today) nextErrors.nextRenewal = c.validation.renewalPast;
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) { focusFirstInvalid(formRef.current); return; }
-    onSave({ name: name.trim(), plan: plan.trim() || c.demo.plans.personal, amount: numericAmount, cycle, nextRenewal }, initial);
+    onSave({ name: name.trim(), plan: plan.trim(), amount: numericAmount, cycle, nextRenewal }, initial);
     onClose();
   }
   return (
     <SheetFrame title={initial ? c.subscriptionForm.editTitle : c.subscriptionForm.title} subtitle={initial ? c.subscriptionForm.editSubtitle : c.subscriptionForm.subtitle} labelledBy="subscription-sheet-title" onClose={onClose}>
       <form ref={formRef} onSubmit={submit} noValidate>
-        <label className="field"><span>{c.subscriptionForm.serviceName}</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder={c.subscriptionForm.servicePlaceholder} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'subscription-name-error' : undefined} />{errors.name && <small id="subscription-name-error" className="field-error" role="alert">{errors.name}</small>}</label>
+        <label className="field"><span>{c.subscriptionForm.serviceName}</span><div className="service-name-input"><ServiceIcon name={name} monogram={name.trim().slice(0, 1).toUpperCase() || '?'} tone="graphite" /><input autoFocus list="tally-service-suggestions" value={name} onChange={(event) => setName(event.target.value)} placeholder={c.subscriptionForm.servicePlaceholder} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'subscription-name-error' : undefined} /></div><datalist id="tally-service-suggestions">{SERVICE_SUGGESTIONS.map((service) => <option value={service} key={service} />)}</datalist>{errors.name && <small id="subscription-name-error" className="field-error" role="alert">{errors.name}</small>}</label>
         <label className="field"><span>{c.subscriptionForm.plan}</span><input value={plan} onChange={(event) => setPlan(event.target.value)} placeholder={c.subscriptionForm.planPlaceholder} /></label>
         <div className="split-fields"><label className="field"><span>{c.subscriptionForm.cost}</span><div className="money-input"><input inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value.replace(/\D/g, ''))} placeholder="0" aria-invalid={Boolean(errors.amount)} aria-describedby={errors.amount ? 'subscription-amount-error' : undefined} /><strong>{currencySymbol}</strong></div>{errors.amount && <small id="subscription-amount-error" className="field-error" role="alert">{errors.amount}</small>}</label><label className="field"><span>{c.subscriptionForm.cycle.label}</span><select value={cycle} onChange={(event) => setCycle(event.target.value as BillingCycle)}><option value="month">{c.subscriptionForm.cycle.month}</option><option value="year">{c.subscriptionForm.cycle.year}</option></select></label></div>
         <label className="field"><span>{c.subscriptionForm.renewalDate}</span><input type="date" min={initial ? undefined : today} value={nextRenewal} onChange={(event) => setNextRenewal(event.target.value)} aria-invalid={Boolean(errors.nextRenewal)} aria-describedby={errors.nextRenewal ? 'subscription-renewal-error' : undefined} />{errors.nextRenewal && <small id="subscription-renewal-error" className="field-error" role="alert">{errors.nextRenewal}</small>}</label>
@@ -1198,11 +1206,12 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
   );
 }
 
-function BudgetSheet({ initial, budgets, onClose, onSave }: { initial?: Budget; budgets: Budget[]; onClose: () => void; onSave: (input: BudgetInput, existing?: Budget) => void }) {
+function BudgetSheet({ initial, budgets, customCategories, onClose, onSave }: { initial?: Budget; budgets: Budget[]; customCategories: CustomExpenseCategory[]; onClose: () => void; onSave: (input: BudgetInput, existing?: Budget) => void }) {
   const { c, currencySymbol } = useI18n();
   const formRef = useRef<HTMLFormElement>(null);
-  const firstAvailable = EXPENSE_CATEGORIES.find((category) => !budgets.some((item) => item.category === category)) ?? 'dining';
+  const firstAvailable = EXPENSE_CATEGORY_DEFINITIONS.find((category) => category.id !== 'other' && !budgets.some((item) => item.category === category.id))?.id ?? 'dining';
   const [category, setCategory] = useState<ExpenseCategoryId>(initial?.category ?? firstAvailable);
+  const [pendingCustomCategory, setPendingCustomCategory] = useState<CustomExpenseCategory | undefined>();
   const [limit, setLimit] = useState(initial ? String(initial.limit) : '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   function submit(event: FormEvent) {
@@ -1215,13 +1224,13 @@ function BudgetSheet({ initial, budgets, onClose, onSave }: { initial?: Budget; 
     else if (!isSafeAmount(numericLimit)) nextErrors.limit = c.validation.unsafeAmount;
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) { focusFirstInvalid(formRef.current); return; }
-    onSave({ category, limit: numericLimit }, initial);
+    onSave({ category, limit: numericLimit, customCategory: pendingCustomCategory }, initial);
     onClose();
   }
   return (
     <SheetFrame title={initial ? c.budgetForm.editTitle : c.budgetForm.addTitle} subtitle={initial ? c.budgetForm.editSubtitle : c.budgetForm.addSubtitle} labelledBy="budget-sheet-title" onClose={onClose}>
       <form ref={formRef} onSubmit={submit} noValidate>
-        <label className="field"><span>{c.budgetForm.category}</span><select autoFocus value={category} onChange={(event) => setCategory(event.target.value as ExpenseCategoryId)} aria-invalid={Boolean(errors.category)} aria-describedby={errors.category ? 'budget-category-error' : undefined}>{EXPENSE_CATEGORIES.map((item) => <option key={item} value={item}>{c.categories[item]}</option>)}</select>{errors.category && <small id="budget-category-error" className="field-error" role="alert">{errors.category}</small>}</label>
+        <CategoryPicker autoFocus label={c.budgetForm.category} value={category} customCategories={pendingCustomCategory ? [...customCategories, pendingCustomCategory] : customCategories} onChange={(nextCategory, created) => { setCategory(nextCategory); setPendingCustomCategory((current) => created ?? (current?.id === nextCategory ? current : undefined)); }} error={errors.category} errorId="budget-category-error" />
         <label className="field"><span>{c.budgetForm.monthlyLimit}</span><div className="money-input"><input inputMode="numeric" value={limit} onChange={(event) => setLimit(event.target.value.replace(/\D/g, ''))} placeholder="0" aria-invalid={Boolean(errors.limit)} aria-describedby={errors.limit ? 'budget-limit-error' : undefined} /><strong>{currencySymbol}</strong></div>{errors.limit && <small id="budget-limit-error" className="field-error" role="alert">{errors.limit}</small>}</label>
         <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{initial ? c.budgetForm.update : c.budgetForm.save}</button></div>
       </form>
@@ -1330,7 +1339,7 @@ function SettingsSheet({ data, storageStatus, onClose, onOpeningBalance, onResto
           <button type="button" className="settings-row" onClick={(event) => openConfirmation('restore', event.currentTarget)}><span><strong>{c.settings.restoreSample}</strong><small>{c.settings.restoreSampleBody}</small></span><CaretRight size={18} weight="bold" aria-hidden="true" /></button>
           <button type="button" className="settings-row is-danger" onClick={(event) => openConfirmation('clear', event.currentTarget)}><span><strong>{c.settings.clearAll}</strong><small>{c.settings.clearAllBody}</small></span><Trash size={19} weight="bold" aria-hidden="true" /></button>
         </div>
-        {confirming && <div className="inline-confirm" role="group" aria-labelledby="confirm-action-title" aria-describedby="confirm-action-description"><WarningCircle size={23} weight="fill" aria-hidden="true" /><div><strong id="confirm-action-title">{confirming === 'clear' ? c.settings.confirmClearTitle : c.settings.restoreSample}</strong><small id="confirm-action-description">{confirming === 'clear' ? c.settings.confirmClearBody : c.settings.restoreSampleBody}</small></div><div><button ref={confirmCancel} type="button" className="cancel-action" onClick={cancelConfirmation}>{c.common.cancel}</button><button type="button" className="danger-action" onClick={() => { if (confirming === 'clear') onClear(); else onRestoreSample(); onClose(); }}>{confirming === 'clear' ? c.settings.confirmClearAction : c.common.confirm}</button></div></div>}
+        {confirming && <div className="inline-confirm" role="group" aria-labelledby="confirm-action-title" aria-describedby="confirm-action-description"><WarningCircle size={23} weight="fill" aria-hidden="true" /><div><strong id="confirm-action-title">{confirming === 'clear' ? c.settings.confirmClearTitle : c.settings.restoreSample}</strong><small id="confirm-action-description">{confirming === 'clear' ? c.settings.confirmClearBody : c.settings.restoreSampleBody}</small></div><div><button ref={confirmCancel} type="button" className="cancel-action" onClick={cancelConfirmation}>{c.common.cancel}</button><button type="button" className="danger-action" onClick={() => { if (confirming === 'clear') onClear(); else onRestoreSample(); onClose(); }}>{confirming === 'clear' ? c.settings.confirmClearAction : c.settings.confirmRestoreAction}</button></div></div>}
       </div>
     </SheetFrame>
   );

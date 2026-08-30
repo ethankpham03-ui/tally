@@ -1,16 +1,148 @@
-export const FINANCE_DATA_VERSION = 1 as const;
+export const FINANCE_DATA_VERSION = 2 as const;
 export const FINANCE_STORAGE_KEY = 'tally-finance-v1';
 
-export const EXPENSE_CATEGORIES = [
-  'dining',
-  'shopping',
-  'transport',
-  'bills',
-  'entertainment',
-  'other',
+export const CATEGORY_ICON_IDS = [
+  'fork-knife', 'shopping-cart', 'coffee', 'package', 'hamburger', 'cookie', 'beer-bottle',
+  'briefcase', 'house', 'key', 'bank', 'receipt', 'lightning', 'drop', 'flame', 'wifi',
+  'device-mobile', 'broom', 'hammer', 'armchair', 'car', 'bus', 'gas-pump', 'charging-station',
+  'road', 'wrench', 'shield', 'credit-card', 'bicycle', 'shopping-bag', 't-shirt', 'sneaker',
+  'laptop', 'sparkle', 'scissors', 'watch', 'first-aid', 'pill', 'hospital', 'tooth', 'eye',
+  'barbell', 'brain', 'wellness', 'users', 'baby', 'coins', 'person', 'paw-print',
+  'graduation-cap', 'book', 'pencil', 'certificate', 'translate', 'film', 'television',
+  'game-controller', 'ticket', 'palette', 'soccer-ball', 'martini', 'music', 'airplane',
+  'bed', 'map', 'identification-card', 'suitcase', 'cloud', 'globe', 'newspaper', 'link',
+  'percent', 'file-text', 'gavel', 'piggy-bank', 'chart-line', 'desktop', 'megaphone',
+  'truck', 'handshake', 'gift', 'hand-heart', 'church', 'confetti', 'dots',
 ] as const;
 
-export type ExpenseCategoryId = (typeof EXPENSE_CATEGORIES)[number];
+export type CategoryIconId = (typeof CATEGORY_ICON_IDS)[number];
+
+export const EXPENSE_CATEGORY_DEFINITIONS = [
+  { id: 'dining', group: 'food', icon: 'fork-knife' },
+  { id: 'groceries', group: 'food', icon: 'shopping-cart' },
+  { id: 'cafe', group: 'food', icon: 'coffee' },
+  { id: 'food_delivery', group: 'food', icon: 'package' },
+  { id: 'street_food', group: 'food', icon: 'hamburger' },
+  { id: 'snacks', group: 'food', icon: 'cookie' },
+  { id: 'drinks_alcohol', group: 'food', icon: 'beer-bottle' },
+  { id: 'work_meals', group: 'food', icon: 'briefcase' },
+
+  { id: 'rent', group: 'housing', icon: 'key' },
+  { id: 'mortgage', group: 'housing', icon: 'bank' },
+  { id: 'bills', group: 'housing', icon: 'receipt' },
+  { id: 'electricity', group: 'housing', icon: 'lightning' },
+  { id: 'water', group: 'housing', icon: 'drop' },
+  { id: 'cooking_gas', group: 'housing', icon: 'flame' },
+  { id: 'internet', group: 'housing', icon: 'wifi' },
+  { id: 'mobile_phone', group: 'housing', icon: 'device-mobile' },
+  { id: 'household_supplies', group: 'housing', icon: 'broom' },
+  { id: 'home_maintenance', group: 'housing', icon: 'hammer' },
+  { id: 'furniture_appliances', group: 'housing', icon: 'armchair' },
+  { id: 'domestic_help', group: 'housing', icon: 'house' },
+
+  { id: 'transport', group: 'transportation', icon: 'car' },
+  { id: 'ride_hailing', group: 'transportation', icon: 'car' },
+  { id: 'public_transport', group: 'transportation', icon: 'bus' },
+  { id: 'fuel', group: 'transportation', icon: 'gas-pump' },
+  { id: 'ev_charging', group: 'transportation', icon: 'charging-station' },
+  { id: 'parking_tolls', group: 'transportation', icon: 'road' },
+  { id: 'vehicle_maintenance', group: 'transportation', icon: 'wrench' },
+  { id: 'vehicle_insurance', group: 'transportation', icon: 'shield' },
+  { id: 'vehicle_loan', group: 'transportation', icon: 'credit-card' },
+  { id: 'bicycle', group: 'transportation', icon: 'bicycle' },
+
+  { id: 'shopping', group: 'shopping_personal', icon: 'shopping-bag' },
+  { id: 'clothing', group: 'shopping_personal', icon: 't-shirt' },
+  { id: 'footwear', group: 'shopping_personal', icon: 'sneaker' },
+  { id: 'electronics', group: 'shopping_personal', icon: 'laptop' },
+  { id: 'cosmetics', group: 'shopping_personal', icon: 'sparkle' },
+  { id: 'personal_care', group: 'shopping_personal', icon: 'scissors' },
+  { id: 'accessories', group: 'shopping_personal', icon: 'watch' },
+
+  { id: 'medical', group: 'health', icon: 'first-aid' },
+  { id: 'pharmacy', group: 'health', icon: 'pill' },
+  { id: 'hospital', group: 'health', icon: 'hospital' },
+  { id: 'dental', group: 'health', icon: 'tooth' },
+  { id: 'vision', group: 'health', icon: 'eye' },
+  { id: 'health_insurance', group: 'health', icon: 'shield' },
+  { id: 'fitness', group: 'health', icon: 'barbell' },
+  { id: 'mental_health', group: 'health', icon: 'brain' },
+  { id: 'wellness', group: 'health', icon: 'wellness' },
+
+  { id: 'childcare', group: 'family', icon: 'baby' },
+  { id: 'baby_supplies', group: 'family', icon: 'baby' },
+  { id: 'family_support', group: 'family', icon: 'hand-heart' },
+  { id: 'parents', group: 'family', icon: 'users' },
+  { id: 'allowance', group: 'family', icon: 'coins' },
+  { id: 'elder_care', group: 'family', icon: 'person' },
+  { id: 'pet_care', group: 'family', icon: 'paw-print' },
+
+  { id: 'tuition', group: 'education', icon: 'graduation-cap' },
+  { id: 'courses', group: 'education', icon: 'certificate' },
+  { id: 'books', group: 'education', icon: 'book' },
+  { id: 'stationery', group: 'education', icon: 'pencil' },
+  { id: 'exam_fees', group: 'education', icon: 'certificate' },
+  { id: 'language_learning', group: 'education', icon: 'translate' },
+  { id: 'professional_training', group: 'education', icon: 'briefcase' },
+
+  { id: 'entertainment', group: 'leisure', icon: 'film' },
+  { id: 'streaming', group: 'leisure', icon: 'television' },
+  { id: 'cinema', group: 'leisure', icon: 'film' },
+  { id: 'gaming', group: 'leisure', icon: 'game-controller' },
+  { id: 'live_events', group: 'leisure', icon: 'ticket' },
+  { id: 'hobbies', group: 'leisure', icon: 'palette' },
+  { id: 'sports', group: 'leisure', icon: 'soccer-ball' },
+  { id: 'nightlife', group: 'leisure', icon: 'martini' },
+  { id: 'music', group: 'leisure', icon: 'music' },
+
+  { id: 'flights', group: 'travel', icon: 'airplane' },
+  { id: 'intercity_transport', group: 'travel', icon: 'bus' },
+  { id: 'accommodation', group: 'travel', icon: 'bed' },
+  { id: 'tours', group: 'travel', icon: 'map' },
+  { id: 'visa', group: 'travel', icon: 'identification-card' },
+  { id: 'travel_insurance', group: 'travel', icon: 'shield' },
+  { id: 'souvenirs', group: 'travel', icon: 'suitcase' },
+
+  { id: 'subscriptions', group: 'digital', icon: 'credit-card' },
+  { id: 'software', group: 'digital', icon: 'desktop' },
+  { id: 'cloud_storage', group: 'digital', icon: 'cloud' },
+  { id: 'domains_hosting', group: 'digital', icon: 'globe' },
+  { id: 'news_media', group: 'digital', icon: 'newspaper' },
+  { id: 'online_services', group: 'digital', icon: 'link' },
+
+  { id: 'bank_fees', group: 'finance', icon: 'bank' },
+  { id: 'credit_card_fees', group: 'finance', icon: 'credit-card' },
+  { id: 'loan_payment', group: 'finance', icon: 'coins' },
+  { id: 'interest', group: 'finance', icon: 'percent' },
+  { id: 'taxes', group: 'finance', icon: 'file-text' },
+  { id: 'fines', group: 'finance', icon: 'gavel' },
+  { id: 'savings', group: 'finance', icon: 'piggy-bank' },
+  { id: 'investments', group: 'finance', icon: 'chart-line' },
+  { id: 'insurance_general', group: 'finance', icon: 'shield' },
+
+  { id: 'work_supplies', group: 'work', icon: 'briefcase' },
+  { id: 'coworking', group: 'work', icon: 'house' },
+  { id: 'equipment', group: 'work', icon: 'desktop' },
+  { id: 'advertising', group: 'work', icon: 'megaphone' },
+  { id: 'logistics', group: 'work', icon: 'truck' },
+  { id: 'professional_services', group: 'work', icon: 'handshake' },
+  { id: 'business_meals', group: 'work', icon: 'fork-knife' },
+  { id: 'business_travel', group: 'work', icon: 'airplane' },
+
+  { id: 'gifts', group: 'giving', icon: 'gift' },
+  { id: 'charity', group: 'giving', icon: 'hand-heart' },
+  { id: 'religious', group: 'giving', icon: 'church' },
+  { id: 'celebrations', group: 'giving', icon: 'confetti' },
+  { id: 'wedding_funeral', group: 'giving', icon: 'users' },
+
+  { id: 'other', group: 'other', icon: 'dots' },
+] as const satisfies ReadonlyArray<{ id: string; group: string; icon: CategoryIconId }>;
+
+export type BuiltInExpenseCategoryId = (typeof EXPENSE_CATEGORY_DEFINITIONS)[number]['id'];
+export type ExpenseCategoryGroupId = (typeof EXPENSE_CATEGORY_DEFINITIONS)[number]['group'];
+export type CustomExpenseCategoryId = `custom:${string}`;
+export type ExpenseCategoryId = BuiltInExpenseCategoryId | CustomExpenseCategoryId;
+export const EXPENSE_CATEGORIES = EXPENSE_CATEGORY_DEFINITIONS.map((category) => category.id) as BuiltInExpenseCategoryId[];
 export type CategoryId = 'income' | ExpenseCategoryId;
 export type BillingCycle = 'month' | 'year';
 export type SubscriptionStatus = 'active' | 'trial' | 'paused';
@@ -51,6 +183,12 @@ export type Transaction = {
   subscriptionPaymentId?: string;
 };
 
+export type CustomExpenseCategory = {
+  id: CustomExpenseCategoryId;
+  name: string;
+  icon: CategoryIconId;
+};
+
 export type Subscription = {
   id: string;
   name: string;
@@ -82,7 +220,7 @@ export type SubscriptionPayment = {
 };
 
 export type FinanceDataV1 = {
-  version: typeof FINANCE_DATA_VERSION;
+  version: 1;
   mode: FinanceMode;
   updatedAt: string;
   openingBalance: number;
@@ -92,7 +230,19 @@ export type FinanceDataV1 = {
   subscriptionPayments: SubscriptionPayment[];
 };
 
-export type FinanceData = FinanceDataV1;
+export type FinanceDataV2 = {
+  version: typeof FINANCE_DATA_VERSION;
+  mode: FinanceMode;
+  updatedAt: string;
+  openingBalance: number;
+  transactions: Transaction[];
+  subscriptions: Subscription[];
+  budgets: Budget[];
+  subscriptionPayments: SubscriptionPayment[];
+  customCategories: CustomExpenseCategory[];
+};
+
+export type FinanceData = FinanceDataV2;
 
 export type FinanceSummary = {
   availableBalance: number;
@@ -132,7 +282,7 @@ export type FinanceDataValidationResult =
   | { valid: false; issues: string[] };
 
 export type ParseFinanceDataResult =
-  | { status: 'ok'; data: FinanceData }
+  | { status: 'ok'; data: FinanceData; migrated?: true }
   | { status: 'missing' }
   | { status: 'corrupt'; issues: string[] }
   | { status: 'future-version'; version: number };
@@ -147,8 +297,10 @@ type UnknownRecord = Record<string, unknown>;
 
 const DAY_MS = 86_400_000;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const CATEGORY_SET = new Set<string>(['income', ...EXPENSE_CATEGORIES]);
 const EXPENSE_CATEGORY_SET = new Set<string>(EXPENSE_CATEGORIES);
+const LEGACY_EXPENSE_CATEGORY_SET = new Set<string>(['dining', 'shopping', 'transport', 'bills', 'entertainment', 'other']);
+const CATEGORY_ICON_SET = new Set<string>(CATEGORY_ICON_IDS);
+const CUSTOM_CATEGORY_PATTERN = /^custom:[a-zA-Z0-9][a-zA-Z0-9_-]{5,}$/;
 const BILLING_CYCLE_SET = new Set<string>(['month', 'year']);
 const STATUS_SET = new Set<string>(['active', 'trial', 'paused']);
 const TONE_SET = new Set<string>(['green', 'blue', 'graphite', 'red', 'violet']);
@@ -268,6 +420,22 @@ export function isSafePositiveAmount(value: unknown): value is number {
   return isSafeMoney(value) && value > 0;
 }
 
+export function isBuiltInExpenseCategory(value: unknown): value is BuiltInExpenseCategoryId {
+  return typeof value === 'string' && EXPENSE_CATEGORY_SET.has(value);
+}
+
+export function isCustomExpenseCategoryId(value: unknown): value is CustomExpenseCategoryId {
+  return typeof value === 'string' && CUSTOM_CATEGORY_PATTERN.test(value);
+}
+
+export function isExpenseCategoryId(value: unknown): value is ExpenseCategoryId {
+  return isBuiltInExpenseCategory(value) || isCustomExpenseCategoryId(value);
+}
+
+export function expenseCategoryDefinition(category: BuiltInExpenseCategoryId) {
+  return EXPENSE_CATEGORY_DEFINITIONS.find((item) => item.id === category)!;
+}
+
 /** Returns `to - from` in whole calendar days. Date-only parsing makes this DST-safe. */
 export function dateOnlyDayDifference(from: string, to: string) {
   return Math.round((utcEpoch(requireDateOnly(to)) - utcEpoch(requireDateOnly(from))) / DAY_MS);
@@ -317,6 +485,7 @@ export function createEmptyData(openingBalance = 0, reference = new Date()): Fin
     subscriptions: [],
     budgets: [],
     subscriptionPayments: [],
+    customCategories: [],
   };
 }
 
@@ -394,6 +563,7 @@ export function createDemoData(reference = new Date()): FinanceData {
       { id: 'demo-budget-entertainment', category: 'entertainment', limit: 800_000 },
     ],
     subscriptionPayments: [],
+    customCategories: [],
   };
 }
 
@@ -497,9 +667,11 @@ function parseTransaction(value: unknown, path: string, issues: string[]): Trans
   if (typeof title !== 'string') issues.push(`${path}.title must be a string`);
   if (titleKey !== undefined && (typeof titleKey !== 'string' || !DEMO_TITLE_SET.has(titleKey))) issues.push(`${path}.titleKey is invalid`);
   if ((!isNonEmptyString(title)) && titleKey === undefined) issues.push(`${path} needs a title or titleKey`);
-  if (typeof category !== 'string' || !CATEGORY_SET.has(category)) issues.push(`${path}.category is invalid`);
+  if (category !== 'income' && !isExpenseCategoryId(category)) issues.push(`${path}.category is invalid`);
   if (!isValidDateOnly(date)) issues.push(`${path}.date is invalid`);
   if (!isSafeMoney(amount) || amount === 0) issues.push(`${path}.amount must be a non-zero safe integer`);
+  if (isSafeMoney(amount) && amount > 0 && category !== 'income') issues.push(`${path}.category must be income for money in`);
+  if (isSafeMoney(amount) && amount < 0 && category === 'income') issues.push(`${path}.category must be an expense for money out`);
   if (!isOptionalString(subscriptionPaymentId)) issues.push(`${path}.subscriptionPaymentId must be a string`);
   if (issues.some((issue) => issue.startsWith(path))) return null;
   return {
@@ -549,10 +721,20 @@ function parseBudget(value: unknown, path: string, issues: string[]): Budget | n
   if (!isRecord(value)) { issues.push(`${path} must be an object`); return null; }
   const { id, category, limit } = value;
   if (!isNonEmptyString(id)) issues.push(`${path}.id must be a non-empty string`);
-  if (typeof category !== 'string' || !EXPENSE_CATEGORY_SET.has(category)) issues.push(`${path}.category is invalid`);
+  if (!isExpenseCategoryId(category)) issues.push(`${path}.category is invalid`);
   if (!isSafePositiveAmount(limit)) issues.push(`${path}.limit must be a positive safe integer`);
   if (issues.some((issue) => issue.startsWith(path))) return null;
   return { id: id as string, category: category as ExpenseCategoryId, limit: limit as number };
+}
+
+function parseCustomCategory(value: unknown, path: string, issues: string[]): CustomExpenseCategory | null {
+  if (!isRecord(value)) { issues.push(`${path} must be an object`); return null; }
+  const { id, name, icon } = value;
+  if (!isCustomExpenseCategoryId(id)) issues.push(`${path}.id is invalid`);
+  if (!isNonEmptyString(name) || (name as string).trim().length > 40) issues.push(`${path}.name must be between 1 and 40 characters`);
+  if (typeof icon !== 'string' || !CATEGORY_ICON_SET.has(icon)) issues.push(`${path}.icon is invalid`);
+  if (issues.some((issue) => issue.startsWith(path))) return null;
+  return { id: id as CustomExpenseCategoryId, name: (name as string).trim(), icon: icon as CategoryIconId };
 }
 
 function parsePayment(value: unknown, path: string, issues: string[]): SubscriptionPayment | null {
@@ -594,6 +776,7 @@ export function validateFinanceData(value: unknown): FinanceDataValidationResult
   if (!Array.isArray(value.subscriptions)) issues.push('subscriptions must be an array');
   if (!Array.isArray(value.budgets)) issues.push('budgets must be an array');
   if (!Array.isArray(value.subscriptionPayments)) issues.push('subscriptionPayments must be an array');
+  if (!Array.isArray(value.customCategories)) issues.push('customCategories must be an array');
 
   const transactions = Array.isArray(value.transactions)
     ? value.transactions.map((item, index) => parseTransaction(item, `transactions[${index}]`, issues)).filter((item): item is Transaction => item !== null)
@@ -607,13 +790,26 @@ export function validateFinanceData(value: unknown): FinanceDataValidationResult
   const subscriptionPayments = Array.isArray(value.subscriptionPayments)
     ? value.subscriptionPayments.map((item, index) => parsePayment(item, `subscriptionPayments[${index}]`, issues)).filter((item): item is SubscriptionPayment => item !== null)
     : [];
+  const customCategories = Array.isArray(value.customCategories)
+    ? value.customCategories.map((item, index) => parseCustomCategory(item, `customCategories[${index}]`, issues)).filter((item): item is CustomExpenseCategory => item !== null)
+    : [];
 
   collectUniqueIds(transactions, 'transactions', issues);
   collectUniqueIds(subscriptions, 'subscriptions', issues);
   collectUniqueIds(budgets, 'budgets', issues);
   collectUniqueIds(subscriptionPayments, 'subscriptionPayments', issues);
+  collectUniqueIds(customCategories, 'customCategories', issues);
+  const customCategoryIds = new Set(customCategories.map((category) => category.id));
+  for (const transaction of transactions) {
+    if (isCustomExpenseCategoryId(transaction.category) && !customCategoryIds.has(transaction.category)) {
+      issues.push(`transactions references missing custom category ${transaction.category}`);
+    }
+  }
   const budgetCategories = new Set<string>();
   for (const budget of budgets) {
+    if (isCustomExpenseCategoryId(budget.category) && !customCategoryIds.has(budget.category)) {
+      issues.push(`budgets references missing custom category ${budget.category}`);
+    }
     if (budgetCategories.has(budget.category)) issues.push(`budgets contains duplicate category ${budget.category}`);
     budgetCategories.add(budget.category);
   }
@@ -639,7 +835,29 @@ export function validateFinanceData(value: unknown): FinanceDataValidationResult
       subscriptions,
       budgets,
       subscriptionPayments,
+      customCategories,
     },
+  };
+}
+
+function migrateFinanceDataV1(value: UnknownRecord): UnknownRecord {
+  const transactions = Array.isArray(value.transactions)
+    ? value.transactions.map((transaction) => {
+      if (!isRecord(transaction) || !isSafeMoney(transaction.amount)) return transaction;
+      if (transaction.amount > 0 && typeof transaction.category === 'string' && LEGACY_EXPENSE_CATEGORY_SET.has(transaction.category)) {
+        return { ...transaction, category: 'income' };
+      }
+      if (transaction.amount < 0 && transaction.category === 'income') {
+        return { ...transaction, category: 'other' };
+      }
+      return transaction;
+    })
+    : value.transactions;
+  return {
+    ...value,
+    version: FINANCE_DATA_VERSION,
+    transactions,
+    customCategories: [],
   };
 }
 
@@ -654,14 +872,44 @@ export function parseFinanceData(raw: string | null | undefined): ParseFinanceDa
   if (isRecord(parsed) && typeof parsed.version === 'number' && parsed.version > FINANCE_DATA_VERSION) {
     return { status: 'future-version', version: parsed.version };
   }
-  const result = validateFinanceData(parsed);
-  return result.valid ? { status: 'ok', data: result.data } : { status: 'corrupt', issues: result.issues };
+  const legacy = isRecord(parsed) && parsed.version === 1 ? parsed : undefined;
+  const migrated = legacy !== undefined;
+  const candidate = legacy ? migrateFinanceDataV1(legacy) : parsed;
+  const result = validateFinanceData(candidate);
+  return result.valid
+    ? { status: 'ok', data: result.data, ...(migrated ? { migrated: true as const } : {}) }
+    : { status: 'corrupt', issues: result.issues };
 }
 
 export function serializeFinanceData(data: FinanceData) {
   const result = validateFinanceData(data);
   if (!result.valid) throw new TypeError(`Cannot serialize invalid finance data: ${result.issues.join('; ')}`);
   return JSON.stringify(result.data);
+}
+
+export function suggestSubscriptionExpenseCategory(name: string): BuiltInExpenseCategoryId {
+  const normalized = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[^a-zA-Z0-9+]+/g, ' ')
+    .trim()
+    .toLocaleLowerCase();
+  const matches = (aliases: readonly string[]) => aliases.some((alias) => (
+    normalized === alias
+    || normalized.startsWith(`${alias} `)
+    || normalized.endsWith(` ${alias}`)
+    || normalized.includes(` ${alias} `)
+  ));
+  if (matches(['spotify', 'apple music', 'youtube music', 'tidal', 'deezer', 'soundcloud', 'music'])) return 'music';
+  if (matches(['netflix', 'disney+', 'disney plus', 'hbo max', 'max', 'prime video', 'viu', 'fpt play', 'galaxy play', 'k+', 'video', 'film', 'apple tv+'])) return 'streaming';
+  if (matches(['xbox game pass', 'playstation plus', 'ps plus', 'ea play', 'ubisoft+', 'steam', 'gaming'])) return 'gaming';
+  if (matches(['icloud', 'google one', 'dropbox', 'onedrive', 'box', 'cloud', 'storage'])) return 'cloud_storage';
+  if (matches(['duolingo', 'babbel', 'elsa speak', 'language'])) return 'language_learning';
+  if (matches(['coursera', 'udemy', 'skillshare', 'masterclass', 'course'])) return 'courses';
+  if (matches(['gym', 'fitness', 'yoga', 'pilates'])) return 'fitness';
+  if (matches(['figma', 'chatgpt', 'notion', 'canva', 'adobe', 'github', 'microsoft 365', 'office 365', 'slack', 'zoom', 'software', 'app'])) return 'software';
+  return 'online_services';
 }
 
 export function recordSubscriptionPayment(
@@ -692,7 +940,7 @@ export function recordSubscriptionPayment(
   const transaction: Transaction = {
     id: transactionId,
     title: subscription.name,
-    category: 'bills',
+    category: suggestSubscriptionExpenseCategory(subscription.name),
     date: paidOn,
     amount: -subscription.amount,
     subscriptionPaymentId: paymentId,

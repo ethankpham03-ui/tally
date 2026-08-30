@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  CATEGORY_ICON_IDS,
+  EXPENSE_CATEGORY_DEFINITIONS,
   FINANCE_DATA_VERSION,
   addDaysDateOnly,
   addMonthsPreservingAnchor,
@@ -18,6 +20,7 @@ import {
   parseFinanceData,
   recordSubscriptionPayment,
   serializeFinanceData,
+  suggestSubscriptionExpenseCategory,
   validateFinanceData,
   type Transaction,
 } from '../app/finance-domain.ts';
@@ -144,6 +147,64 @@ test('versioned JSON parser distinguishes missing, corrupt, future and valid dat
   if (parsed.status === 'ok') assert.deepEqual(parsed.data, data);
 });
 
+test('v1 backups migrate to v2 without changing financial totals', () => {
+  const current = createDemoData(reference);
+  const before = deriveFinanceSummary(current, reference);
+  const legacy = structuredClone(current) as unknown as Record<string, unknown>;
+  legacy.version = 1;
+  delete legacy.customCategories;
+
+  const parsed = parseFinanceData(JSON.stringify(legacy));
+  assert.equal(parsed.status, 'ok');
+  if (parsed.status !== 'ok') return;
+  assert.equal(parsed.data.version, FINANCE_DATA_VERSION);
+  assert.deepEqual(parsed.data.customCategories, []);
+  assert.deepEqual(deriveFinanceSummary(parsed.data, reference), before);
+});
+
+test('v1 migration normalizes legacy amount and category mismatches', () => {
+  const legacy = structuredClone(createEmptyData(0, reference)) as unknown as Record<string, unknown>;
+  legacy.version = 1;
+  delete legacy.customCategories;
+  legacy.transactions = [
+    { id: 'legacy-income', title: 'Refund', category: 'shopping', date: '2026-08-20', amount: 250_000 },
+    { id: 'legacy-expense', title: 'Charge', category: 'income', date: '2026-08-21', amount: -90_000 },
+  ];
+
+  const parsed = parseFinanceData(JSON.stringify(legacy));
+  assert.equal(parsed.status, 'ok');
+  if (parsed.status !== 'ok') return;
+  assert.equal(parsed.migrated, true);
+  assert.deepEqual(parsed.data.transactions.map((transaction) => transaction.category), ['income', 'other']);
+});
+
+test('custom categories round-trip through validated backups', () => {
+  const data = createEmptyData(0, reference);
+  const category = { id: 'custom:plants_123' as const, name: 'Chăm cây cảnh', icon: 'sparkle' as const };
+  data.customCategories.push(category);
+  data.transactions.push({ id: 'custom-tx', title: 'Đất trồng', category: category.id, date: '2026-08-27', amount: -125_000 });
+  data.budgets.push({ id: 'custom-budget', category: category.id, limit: 500_000 });
+
+  const parsed = parseFinanceData(serializeFinanceData(data));
+  assert.equal(parsed.status, 'ok');
+  if (parsed.status === 'ok') assert.deepEqual(parsed.data, data);
+});
+
+test('expense taxonomy has unique stable ids and allowlisted icons', () => {
+  const ids = EXPENSE_CATEGORY_DEFINITIONS.map((category) => category.id);
+  const iconIds = new Set<string>(CATEGORY_ICON_IDS);
+  assert.ok(ids.length >= 90);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.ok(EXPENSE_CATEGORY_DEFINITIONS.every((category) => iconIds.has(category.icon)));
+});
+
+test('subscription category suggestions use brand boundaries instead of substrings', () => {
+  assert.equal(suggestSubscriptionExpenseCategory('Apple TV+'), 'streaming');
+  assert.equal(suggestSubscriptionExpenseCategory('Xbox Game Pass'), 'gaming');
+  assert.equal(suggestSubscriptionExpenseCategory('Box Business'), 'cloud_storage');
+  assert.equal(suggestSubscriptionExpenseCategory('A small app'), 'software');
+});
+
 test('runtime validation rejects unsafe monetary values and duplicate budget categories', () => {
   const data = createDemoData(reference);
   const unsafe = structuredClone(data) as unknown as { openingBalance: number };
@@ -174,7 +235,7 @@ test('recording a subscription payment creates one ledger expense and advances i
   if (result.status !== 'recorded') return;
   assert.equal(result.data.transactions.length, transactionCount + 1);
   assert.equal(result.transaction.amount, -59_000);
-  assert.equal(result.transaction.category, 'bills');
+  assert.equal(result.transaction.category, 'music');
   assert.equal(result.payment.occurrenceDate, occurrenceDate);
   assert.equal(result.data.subscriptions.find((item) => item.id === subscription.id)?.nextRenewal, '2026-09-28');
   assert.equal(result.data.mode, 'personal');

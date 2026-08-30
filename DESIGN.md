@@ -52,42 +52,42 @@ typography:
     lineHeight: 1
     letterSpacing: "-0.04em"
   headline:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "clamp(21px, 2vw, 28px)"
     fontWeight: 720
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "16px"
     fontWeight: 680
     letterSpacing: "-0.015em"
   body:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "14px"
     fontWeight: 430
     lineHeight: 1.5
   control:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "13px"
     fontWeight: 680
     lineHeight: 1.35
   label:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "12px"
     fontWeight: 620
     lineHeight: 1.35
   meta:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "11px"
     fontWeight: 430
     lineHeight: 1.35
   micro:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "10px"
     fontWeight: 430
     lineHeight: 1.3
   service-mark:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "15px"
     fontWeight: 720
   compact-value-min:
@@ -95,11 +95,11 @@ typography:
     fontSize: "17px"
     fontWeight: 710
   mobile-section:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "18px"
     fontWeight: 720
   mobile-app-title:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "19px"
     fontWeight: 680
   metric-emphasis:
@@ -107,7 +107,7 @@ typography:
     fontSize: "20px"
     fontWeight: 710
   mobile-page-heading:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "22px"
     fontWeight: 720
   supporting-total:
@@ -131,7 +131,7 @@ typography:
     fontSize: "36px"
     fontWeight: 710
   field:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
+    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
     fontSize: "16px"
     fontWeight: 400
 rounded:
@@ -229,7 +229,7 @@ The system favors immediate financial legibility, explicit states, generous brea
 - Pearl-grey ground with near-white material surfaces.
 - One cobalt action family, restrained semantic color, and a rank-bound spectral visualization trio.
 - Sculpted directional depth: a crisp white upper-left lip and cool grey lower-right rim precede the wider shadow lobes.
-- Graphite Geist typography with tabular financial numerals.
+- Graphite Be Vietnam Pro interface typography with Geist tabular financial numerals.
 - Quiet divider-led rows and at least 44px mobile targets.
 - Surface corners at 16–20px; controls at 12px.
 - One canonical Tally wave mark, served from the optimized `public/tally-icon-192.png` asset in the app shell.
@@ -286,10 +286,11 @@ Dark mode remaps the same semantic CSS custom properties; reusable components mu
 
 ## Typography
 
-**Display Font:** Geist (with Helvetica Neue and sans-serif fallbacks)  
-**Body Font:** Geist (with Helvetica Neue and sans-serif fallbacks)
+**Interface Font:** Be Vietnam Pro (with Geist, Helvetica Neue, and sans-serif fallbacks)
 
-**Character:** Compact and contemporary, with enough weight for trust but no ornamental display face. Financial numerals use tabular spacing.
+**Financial Numerals:** Geist (with Helvetica Neue and sans-serif fallbacks)
+
+**Character:** Contemporary and distinctly legible in both Vietnamese and English, with enough weight for trust but no ornamental display face. Financial numerals stay compact and use tabular spacing. Interface copy uses real 400, 600, and 700 weights; editorial emphasis may use the bundled italic cuts instead of synthesized italics.
 
 ### Hierarchy
 
@@ -342,7 +343,7 @@ Reduced-motion mode removes spatial movement while preserving brief color and op
 
 ## Iconography
 
-Phosphor is the only interface icon family. Use 20–21px icons for navigation and shell controls, 18px for inline actions, and 16px for compact badges/carets while retaining 44–48px hit targets.
+Phosphor is the only interface and expense-category icon family. Use 20–21px icons for navigation and shell controls, 18px for inline actions, and 16px for compact badges/carets while retaining 44–48px hit targets. Subscription services use locally bundled Simple Icons brand marks or an unmodified verified official app asset where available, with the existing Tally monogram tile as a neutral fallback.
 
 - Inactive navigation uses `regular`; active navigation uses `fill` together with `aria-current` and cobalt treatment.
 - Passive page, field, category, and callout icons use `regular`.
