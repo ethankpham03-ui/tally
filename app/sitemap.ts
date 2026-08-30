@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const siteUrl = 'https://tally-finance.cheapdreams02.chatgpt.site';
+const siteUrl = 'https://tally.ethankpham.workers.dev';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

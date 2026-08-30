@@ -13,7 +13,7 @@ const geistSans = Geist({
   subsets: ['latin', 'latin-ext'],
 });
 
-const siteUrl = 'https://tally-finance.cheapdreams02.chatgpt.site';
+const siteUrl = 'https://tally.ethankpham.workers.dev';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

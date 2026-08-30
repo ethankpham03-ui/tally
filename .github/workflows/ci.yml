@@ -45,3 +45,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Validate Cloudflare deployment
+        run: npm run deploy -- --dry-run --skip-build

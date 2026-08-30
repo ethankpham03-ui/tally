@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://tally-finance.cheapdreams02.chatgpt.site">
+  <a href="https://tally.ethankpham.workers.dev">
     <img src="./public/tally-icon-192.png" width="96" height="96" alt="Tally app icon">
   </a>
 </p>
@@ -13,11 +13,11 @@
 
 <p align="center">
   <a href="https://github.com/ethankpham03-ui/tally/actions/workflows/ci.yml"><img src="https://github.com/ethankpham03-ui/tally/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
-  <a href="https://tally-finance.cheapdreams02.chatgpt.site"><img src="https://img.shields.io/badge/live_demo-open_Tally-00758a" alt="Open the live Tally demo"></a>
+  <a href="https://tally.ethankpham.workers.dev"><img src="https://img.shields.io/badge/live_demo-open_Tally-00758a" alt="Open the live Tally demo"></a>
 </p>
 
 <p align="center">
-  <a href="https://tally-finance.cheapdreams02.chatgpt.site"><strong>Live demo</strong></a>
+  <a href="https://tally.ethankpham.workers.dev"><strong>Live demo</strong></a>
   ·
   <a href="#why-tally">Why Tally</a>
   ·
@@ -74,7 +74,7 @@ The domain layer owns money calculations, date-only arithmetic, recurrence, vali
 - **Application:** React 19, TypeScript, Vinext, and Vite
 - **Interface:** CSS design tokens, Motion, Phosphor Icons, and bundled Be Vietnam Pro typography
 - **Quality:** ESLint, strict TypeScript, and Node's built-in test runner
-- **Delivery:** Cloudflare-compatible output deployed through OpenAI Sites
+- **Delivery:** Native Vinext deployment to Cloudflare Workers
 
 ## Run locally
 
@@ -99,6 +99,14 @@ npm run build
 ```
 
 The test suite covers ledger totals, month scoping, budgets, date-only arithmetic, recurrence, persistence migration and validation, subscription catalog integrity, and idempotent renewal payments. The same checks run automatically for every pull request and push to `main`.
+
+## Deploy
+
+```bash
+npm run deploy
+```
+
+Authenticate once with `wrangler login`. The deploy command is intentionally pinned to the Cloudflare account and `tally` Worker in `wrangler.jsonc`, which publishes to `tally.ethankpham.workers.dev`.
 
 ## Privacy and limitations
 
