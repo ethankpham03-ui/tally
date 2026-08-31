@@ -23,7 +23,7 @@ export function ServiceIcon({
   const catalogService = findCatalogServiceById(serviceId) ?? findCatalogServiceByName(name);
   if (catalogService?.asset) {
     const assetStyle = {
-      '--service-brand': '#ffffff',
+      '--service-brand': 'var(--service-tile)',
       '--service-asset': `url("${catalogService.asset}")`,
     } as CSSProperties;
     const contain = catalogService.id === 'icloud' ? ' service-brand-asset-contain' : '';
@@ -33,7 +33,7 @@ export function ServiceIcon({
   if (!brand) return <span className={`service-mark ${large ? 'large ' : ''}${tone}`} aria-hidden="true">{monogram}</span>;
   if (brand.asset) {
     const assetStyle = {
-      '--service-brand': '#ffffff',
+      '--service-brand': 'var(--service-tile)',
       '--service-brand-ink': '#111827',
       '--service-asset': `url("${brand.asset}")`,
     } as CSSProperties;
@@ -41,7 +41,7 @@ export function ServiceIcon({
   }
   if (!brand.hex || !brand.path) return <span className={`service-mark ${large ? 'large ' : ''}${tone}`} aria-hidden="true">{monogram}</span>;
   const style = {
-    '--service-brand': '#ffffff',
+    '--service-brand': 'var(--service-tile)',
     '--service-brand-ink': `#${brand.hex}`,
   } as CSSProperties;
   return (

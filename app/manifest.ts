@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { APP_THEME_COLORS } from './theme-colors.ts';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -9,8 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    background_color: '#f0f1f4',
-    theme_color: '#00758a',
+    background_color: APP_THEME_COLORS.light,
+    theme_color: APP_THEME_COLORS.light,
     lang: 'en',
     dir: 'ltr',
     categories: ['finance', 'productivity'],
@@ -26,6 +27,18 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
+      },
+      {
+        src: '/tally-icon-maskable-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/tally-icon-maskable-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
       },
     ],
   };

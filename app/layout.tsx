@@ -7,6 +7,7 @@ import '@fontsource/be-vietnam-pro/600-italic.css';
 import '@fontsource/be-vietnam-pro/700.css';
 import '@fontsource/be-vietnam-pro/700-italic.css';
 import './globals.css';
+import { APP_THEME_COLORS } from './theme-colors.ts';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
       { url: '/tally-icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
     shortcut: '/tally-icon-192.png',
-    apple: [{ url: '/tally-icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/tally-icon-maskable-192.png', sizes: '192x192', type: 'image/png' }],
   },
   openGraph: {
     siteName: 'Tally',
@@ -58,9 +59,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   colorScheme: 'light dark',
+  themeColor: APP_THEME_COLORS.light,
 };
 
-const themeBootstrapScript = `(function(){try{var stored=window.localStorage.getItem('tally-theme');var theme=stored==='light'||stored==='dark'?stored:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');var root=document.documentElement;root.dataset.theme=theme;root.style.colorScheme=theme;}catch(error){}})();`;
+const themeBootstrapScript = `(function(){try{var stored=window.localStorage.getItem('tally-theme');var theme=stored==='light'||stored==='dark'?stored:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');var root=document.documentElement;root.dataset.theme=theme;root.style.colorScheme=theme;var themeColor=document.querySelector('meta[name="theme-color"]');if(themeColor){themeColor.setAttribute('content',theme==='dark'?'${APP_THEME_COLORS.dark}':'${APP_THEME_COLORS.light}');}}catch(error){}})();`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

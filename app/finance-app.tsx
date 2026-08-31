@@ -84,6 +84,7 @@ import { CategoryPicker, expenseCategoryIcon, expenseCategoryLabel } from './cat
 import { APP_NAME, I18nProvider, useI18n, type Locale } from './i18n';
 import { VIEW_ORDER, viewDirection as getViewDirection, viewFromHashValue, type View } from './navigation';
 import { ServiceIcon } from './service-icons';
+import { APP_THEME_COLORS, type Theme } from './theme-colors.ts';
 import {
   MANUAL_PLAN_ID,
   MANUAL_SERVICE_ID,
@@ -97,7 +98,6 @@ import {
   findCatalogServiceByName,
 } from './subscription-catalog';
 
-type Theme = 'light' | 'dark';
 type TransactionType = 'income' | 'expense';
 type StorageStatus = 'loading' | 'saving' | 'saved' | 'error' | 'future';
 type StorageWarning = 'corrupt' | 'future' | 'error' | null;
@@ -528,6 +528,7 @@ function AppContent() {
     const next: Theme = current === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     document.documentElement.style.colorScheme = next;
+    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', APP_THEME_COLORS[next]);
     try { window.localStorage.setItem('tally-theme', next); } catch { /* Keep the in-session theme. */ }
     setTheme(next);
   }
@@ -992,7 +993,7 @@ function TransactionList({ transactions, customCategories, compact = false, onDe
         const amountLabel = `${transaction.amount > 0 ? '+' : ''}${formatCurrency(transaction.amount)}`;
         return (
           <article className="transaction-row" key={transaction.id}>
-            <span className={`transaction-icon ${transaction.amount > 0 ? 'is-income' : ''}`}>{transaction.category === 'income' ? <Wallet size={19} weight="regular" aria-hidden="true" /> : <CategoryIcon icon={expenseCategoryIcon(transaction.category, customCategories)} size={19} weight="regular" aria-hidden="true" />}</span>
+            <span className={`transaction-icon ${transaction.amount > 0 ? 'is-income' : ''}`}>{transaction.category === 'income' ? <Wallet size={19} weight="fill" aria-hidden="true" /> : <CategoryIcon icon={expenseCategoryIcon(transaction.category, customCategories)} size={19} weight="fill" aria-hidden="true" />}</span>
             <span className="transaction-copy"><strong>{title}</strong><small>{categoryLabel}</small></span>
             <time dateTime={transaction.date}>{formatDate(transaction.date)}</time>
             <strong className={`transaction-amount ${transaction.amount > 0 ? 'is-positive' : ''} ${moneyDensityClass(amountLabel)}`.trim()} title={amountLabel}>{amountLabel}</strong>

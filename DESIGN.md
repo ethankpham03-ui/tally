@@ -26,17 +26,24 @@ colors:
   service-graphite: "#252c39"
   service-red: "#a72e39"
   service-violet: "#5a439a"
-  dark-surface: "#1d2430"
-  dark-surface-solid: "#252e3b"
-  dark-surface-gradient-end: "#19202b"
-  dark-control-start: "#28313f"
-  dark-control-end: "#1a212c"
-  dark-accent: "#76a3ff"
-  dark-accent-strong: "#91b4ff"
-  dark-accent-gradient-end: "#5d8fe9"
-  dark-accent-hover-start: "#a1c0ff"
-  dark-accent-hover-mid: "#83adff"
-  dark-accent-hover-end: "#6797ef"
+  dark-canvas: "#0f1315"
+  dark-surface: "#181e21"
+  dark-surface-solid: "#20282c"
+  dark-surface-inset: "#111719"
+  dark-surface-gradient-start: "#242c30"
+  dark-surface-gradient-end: "#141a1d"
+  dark-control-start: "#252d31"
+  dark-control-end: "#151b1e"
+  dark-ink: "#f3f5f4"
+  dark-muted: "#b9c2c0"
+  dark-faint: "#8f9b99"
+  dark-accent: "#45beb6"
+  dark-accent-strong: "#73d2cb"
+  dark-accent-soft: "#173532"
+  dark-accent-gradient-end: "#269b99"
+  dark-accent-hover-start: "#7cdcd5"
+  dark-accent-hover-mid: "#55c9c1"
+  dark-accent-hover-end: "#31a8a4"
   line: "rgba(43, 56, 80, 0.1)"
 typography:
   display:
@@ -239,14 +246,14 @@ The system favors immediate financial legibility, explicit states, generous brea
 
 - **Name:** Tally is the fixed one-word English product name. Do not translate or transliterate it.
 - **Canonical icon:** `public/tally-icon.png` remains the source artwork. Use the visually identical optimized `public/tally-icon-192.png` in the app shell and browser metadata; reserve the larger variants for install and branded imagery that need them.
-- **Icon color:** The icon's baked-in teal wave is a locked brand signature. The light-theme interaction family is sampled from that wave, then darkened enough to keep white text above WCAG AA. The dark theme keeps its separate accessible blue treatment.
+- **Icon color:** The icon's baked-in teal wave is a locked brand signature. The light-theme interaction family is sampled from that wave, then darkened enough to keep white text above WCAG AA. The dark theme lifts the same current into a softer sea-glass treatment over a neutral graphite material field.
 - **Language model:** English (`en`) is the default locale and Vietnamese (`vi`) is a complete alternate locale. A language switch changes the full interface instead of showing both languages together.
 - **Locale behavior:** Keep information hierarchy, control dimensions, and meaning stable across locales; update document language, accessible names, date labels, and copy as one coherent locale state.
 - **Identity model:** Tally is local-only and has no sign-in, account profile, or cloud identity. Do not place avatars or account affordances in the app shell.
 
 ## Colors
 
-The palette combines cool neutrals with one interaction accent and restrained financial-state colors.
+The palette combines cool neutrals with one interaction accent and restrained financial-state colors. Dark mode is the **Graphite Tide** variant: neutral ink-black canvas, progressively brighter graphite surfaces, and one restrained sea-glass Tally action current.
 
 ### Primary
 
@@ -272,17 +279,17 @@ The palette combines cool neutrals with one interaction accent and restrained fi
 
 ### Spectral Visualization
 
-- **Current Cyan:** The next upcoming renewal (rank 1).
-- **Quiet Violet:** The second upcoming renewal (rank 2).
+- **Current Cyan / Night Steel:** The next upcoming renewal (rank 1). Dark mode shifts this rank toward muted steel blue so it remains visibly separate from the Tally interaction accent.
+- **Quiet Violet / Antique Gold:** The second upcoming renewal (rank 2). Dark mode uses restrained antique gold instead of a luminous purple.
 - **Soft Coral:** The third upcoming renewal (rank 3).
 - These colors may appear only on the renewal visualization, its numbered key, and a low-alpha static data glow. Visible rank numbers and ordered placement remain the primary redundant cue.
 - Light mode uses deeper cores with white index text; dark mode uses brighter cores with graphite index text. The colors are authored in OKLCH with tested sRGB fallbacks.
 
 Dark mode remaps the same semantic CSS custom properties; reusable components must not hard-code the light palette.
 
-**The One Current Rule.** Tally Teal marks primary action, selection, active navigation, and focus in the light theme; do not introduce a second brand accent.
+**The One Current Rule.** Tally Teal marks primary action, selection, active navigation, and focus in both themes; dark mode may raise its luminance but must not replace its hue family with a second brand accent.
 
-**The Spectral Boundary Rule.** Cyan, violet, and coral are visualization auxiliaries, never interaction or semantic accents. They never replace Tally Teal, Ledger Green, Charge Red, or Budget Amber.
+**The Spectral Boundary Rule.** Renewal steel, antique gold, and coral in dark mode, plus their light-mode counterparts, are visualization auxiliaries rather than interaction or semantic accents. They never replace Tally Teal, Ledger Green, Charge Red, or Budget Amber.
 
 ## Typography
 
@@ -346,7 +353,7 @@ Reduced-motion mode removes spatial movement while preserving brief color and op
 Phosphor is the only interface and expense-category icon family. Use 20–21px icons for navigation and shell controls, 18px for inline actions, and 16px for compact badges/carets while retaining 44–48px hit targets. Subscription services use locally bundled Simple Icons brand marks or an unmodified verified official app asset where available, with the existing Tally monogram tile as a neutral fallback.
 
 - Inactive navigation uses `regular`; active navigation uses `fill` together with `aria-current` and the interaction accent treatment.
-- Passive page, field, category, and callout icons use `regular`.
+- Passive page, field, picker, budget, and callout icons use `regular`; transaction-row category glyphs use `fill` so ledger identity stays opaque and immediately scannable at compact size.
 - CTA, edit, delete, close, and icon-only controls use `bold`.
 - Empty-state, hero, and privacy illustrations may use `duotone`.
 - Critical warning/status icons use `fill` and always sit beside explicit copy.
