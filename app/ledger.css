@@ -1,0 +1,51 @@
+.ledger-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; border: 0; padding: 0; margin: 0; }
+.ledger-fields:disabled { opacity: .72; }
+.ledger-fields .field { margin: 0; }
+.ledger-fields .type-switch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ledger-fields .type-switch button { min-width: 0; padding: 6px 4px; white-space: normal; line-height: var(--type-line-label); }
+.ledger-fields .field-error { display: flex; align-items: start; gap: 8px; }
+.merchant-details { border-top: 1px solid var(--line); padding-top: 16px; }
+.merchant-details summary { cursor: pointer; min-height: 44px; color: var(--muted); font-size: var(--type-control-size); font-weight: 600; }
+.merchant-details .field-help { margin: 0 0 16px; }
+.payment-invoice { display: grid; gap: 6px; padding: 0 0 24px; color: var(--muted); font-size: var(--type-control-size); }
+.payment-invoice strong { color: var(--ink); font-size: var(--type-title-size); }
+.ledger-toolbar { flex-wrap: wrap; }
+.ledger-toolbar .search-field { flex: 1 1 220px; }
+.ledger-toolbar .filter-group { flex-wrap: wrap; }
+.ledger-toolbar-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-left: auto; }
+.ledger-account-filter { min-width: 0; flex: 0 1 240px; }
+.ledger-account-filter select { width: 100%; min-height: 44px; padding: 10px 32px 10px 12px; border: 0; border-radius: var(--control-radius); background: var(--surface-inset); box-shadow: var(--shadow-inset); color: var(--ink); font: inherit; font-size: var(--type-control-size); }
+.ledger-row .transaction-copy small { white-space: normal; overflow-wrap: anywhere; }
+.ledger-row-amount { display: grid; gap: 4px; text-align: right; min-width: 0; }
+.ledger-row-amount > small { color: var(--muted); font-size: var(--type-meta-size); overflow-wrap: anywhere; }
+.ledger-row-amount .transaction-amount { white-space: normal; overflow-wrap: anywhere; }
+.ledger-row.kind-transfer .transaction-amount, .ledger-row.kind-adjustment .transaction-amount { color: var(--ink); }
+.ledger-row.kind-refund .transaction-icon { color: var(--positive); }
+.financial-position { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--line); }
+.financial-position > div { display: grid; gap: 6px; min-width: 0; }
+.financial-position small, .valuation-note { color: var(--muted); font-size: var(--type-label-size); }
+.financial-position strong { font-family: var(--font-numeric); font-size: 23px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.valuation-note { display: block; line-height: 1.5; margin-top: 12px; }
+.valuation-note.is-warning { color: var(--warning); }
+.cashflow-mode { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; }
+.cashflow-mode button { padding: 9px 12px; min-height: 44px; color: var(--muted); font-size: var(--type-label-size); border-radius: var(--control-radius); }
+.cashflow-mode button[aria-pressed="true"] { color: var(--accent-strong); background: var(--accent-soft); }
+.subscription-account-label { display: block; color: var(--muted); font-size: var(--type-meta-size); margin-top: 5px; }
+.budget-conversion-note { margin: 12px 0 0; color: var(--warning); font-size: var(--type-label-size); }
+@media (max-width: 900px) {
+  .full-view > .ledger-list .ledger-row > time { display: block; grid-column: 2; grid-row: 2; }
+}
+@media (max-width: 600px) {
+  .ledger-account-filter { flex: 1 1 100%; }
+  .ledger-toolbar-actions { margin-left: 0; width: 100%; }
+  .ledger-toolbar-actions button { flex: 1; }
+  .financial-position { gap: 14px; }
+  .financial-position strong { font-size: 21.06px; }
+}
+@media (max-width: 430px) {
+  .ledger-row { grid-template-columns: 36px minmax(0,1fr) minmax(86px,.8fr); }
+  .ledger-row .ledger-row-amount { grid-column: 3; grid-row: 1; }
+  .ledger-row > time { grid-column: 2; grid-row: 2; }
+  .full-view > .ledger-list .ledger-row .row-actions { grid-column: 3; grid-row: 2; }
+  .ledger-row-amount .transaction-amount { font-size: 15.21px; }
+}

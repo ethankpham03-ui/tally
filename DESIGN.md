@@ -47,100 +47,137 @@ colors:
   line: "rgba(43, 56, 80, 0.1)"
 typography:
   display:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
-    fontSize: "clamp(38px, 4.5vw, 58px)"
-    fontWeight: 710
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "clamp(43.7px, 5.175vw, 66.7px)"
+    fontWeight: 700
     lineHeight: 1
-    letterSpacing: "-0.04em"
+    letterSpacing: "-0.03em"
   display-mobile:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
-    fontSize: "clamp(31px, 9.6vw, 40px)"
-    fontWeight: 710
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "clamp(35.65px, 11.04vw, 46px)"
+    fontWeight: 700
     lineHeight: 1
-    letterSpacing: "-0.04em"
+    letterSpacing: "-0.03em"
   headline:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "clamp(21px, 2vw, 28px)"
-    fontWeight: 720
-    letterSpacing: "-0.025em"
+    fontFamily: "CookieRun, PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "clamp(29.9px, 2.53vw, 36.8px)"
+    fontWeight: 700
+    lineHeight: 1.3
+    letterSpacing: "0"
+  section:
+    fontFamily: "CookieRun, PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "21.06px"
+    fontWeight: 400
+    lineHeight: 1.3
+    letterSpacing: "0"
+  sheet:
+    fontFamily: "CookieRun, PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "27.6px"
+    fontWeight: 700
+    lineHeight: 1.3
+    letterSpacing: "0"
+  sheet-mobile:
+    fontFamily: "CookieRun, PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "25.3px"
+    fontWeight: 700
+    lineHeight: 1.3
+    letterSpacing: "0"
   title:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "16px"
-    fontWeight: 680
-    letterSpacing: "-0.015em"
+    fontFamily: "CookieRun, PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "18.72px"
+    fontWeight: 400
+    lineHeight: 1.3
+    letterSpacing: "0"
+  group-heading:
+    fontFamily: "CookieRun, PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "17.55px"
+    fontWeight: 400
+    lineHeight: 1.3
+    letterSpacing: "0"
+  body-strong:
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "18.72px"
+    fontWeight: 700
+    lineHeight: 1.6
   body:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "14px"
-    fontWeight: 430
-    lineHeight: 1.5
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "17.55px"
+    fontWeight: 500
+    lineHeight: 1.6
   control:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "13px"
-    fontWeight: 680
-    lineHeight: 1.35
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "16.38px"
+    fontWeight: 700
+    lineHeight: 1.45
   label:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "12px"
-    fontWeight: 620
-    lineHeight: 1.35
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "15.21px"
+    fontWeight: 700
+    lineHeight: 1.45
   meta:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "11px"
-    fontWeight: 430
-    lineHeight: 1.35
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "14.04px"
+    fontWeight: 500
+    lineHeight: 1.45
   micro:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "10px"
-    fontWeight: 430
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "11.7px"
+    fontWeight: 500
     lineHeight: 1.3
   service-mark:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "15px"
-    fontWeight: 720
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "17.55px"
+    fontWeight: 700
   compact-value-min:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
-    fontSize: "17px"
-    fontWeight: 710
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "19.55px"
+    fontWeight: 700
   mobile-section:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "18px"
-    fontWeight: 720
-  mobile-app-title:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "19px"
-    fontWeight: 680
-  metric-emphasis:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
-    fontSize: "20px"
-    fontWeight: 710
-  mobile-page-heading:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "22px"
-    fontWeight: 720
-  supporting-total:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
-    fontSize: "24px"
-    fontWeight: 710
-  compact-total:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
-    fontSize: "26px"
-    fontWeight: 710
-  compact-display-min:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
-    fontSize: "27px"
-    fontWeight: 710
-  compact-display-max:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
-    fontSize: "30px"
-    fontWeight: 710
-  renewal-count:
-    fontFamily: "Geist, Helvetica Neue, sans-serif"
-    fontSize: "36px"
-    fontWeight: 710
-  field:
-    fontFamily: "Be Vietnam Pro, Geist, Helvetica Neue, sans-serif"
-    fontSize: "16px"
+    fontFamily: "CookieRun, PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "21.06px"
     fontWeight: 400
+    lineHeight: 1.3
+    letterSpacing: "0"
+  mobile-app-title:
+    fontFamily: "CookieRun, PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "27.6px"
+    fontWeight: 700
+    lineHeight: 1.3
+    letterSpacing: "0"
+  metric-emphasis:
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "23px"
+    fontWeight: 700
+  mobile-page-heading:
+    fontFamily: "CookieRun, PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "29.9px"
+    fontWeight: 700
+    lineHeight: 1.3
+    letterSpacing: "0"
+  supporting-total:
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "27.6px"
+    fontWeight: 700
+  compact-total:
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "29.9px"
+    fontWeight: 700
+  compact-display-min:
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "31.05px"
+    fontWeight: 700
+  compact-display-max:
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "34.5px"
+    fontWeight: 700
+  renewal-count:
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "41.4px"
+    fontWeight: 700
+  field:
+    fontFamily: "PF Beau Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "18.72px"
+    fontWeight: 500
 rounded:
   chart-bar: "4px"
   progress-bar: "5px"
@@ -236,7 +273,7 @@ The system favors immediate financial legibility, explicit states, generous brea
 - Pearl-grey ground with near-white material surfaces.
 - One logo-teal action family in the light theme, restrained semantic color, and a rank-bound spectral visualization trio.
 - Sculpted directional depth: a crisp white upper-left lip and cool grey lower-right rim precede the wider shadow lobes.
-- Graphite Be Vietnam Pro interface typography with Geist tabular financial numerals.
+- Rounded CookieRun titles paired with PF Beau Sans interface copy and tabular financial numerals.
 - Quiet divider-led rows and at least 44px mobile targets.
 - Surface corners at 16–20px; controls at 12px.
 - One canonical Tally wave mark, served from the optimized `public/tally-icon-192.png` asset in the app shell.
@@ -249,7 +286,7 @@ The system favors immediate financial legibility, explicit states, generous brea
 - **Icon color:** The icon's baked-in teal wave is a locked brand signature. The light-theme interaction family is sampled from that wave, then darkened enough to keep white text above WCAG AA. The dark theme lifts the same current into a softer sea-glass treatment over a neutral graphite material field.
 - **Language model:** English (`en`) is the default locale and Vietnamese (`vi`) is a complete alternate locale. A language switch changes the full interface instead of showing both languages together.
 - **Locale behavior:** Keep information hierarchy, control dimensions, and meaning stable across locales; update document language, accessible names, date labels, and copy as one coherent locale state.
-- **Identity model:** Tally is local-only and has no sign-in, account profile, or cloud identity. Do not place avatars or account affordances in the app shell.
+- **Identity model:** Tally is local-only and has no sign-in, user profile, or cloud identity. Do not place avatars or sign-in affordances in the app shell. Financial “Accounts” / “Nguồn tiền” are locally recorded money sources, not user identities.
 
 ## Colors
 
@@ -293,24 +330,29 @@ Dark mode remaps the same semantic CSS custom properties; reusable components mu
 
 ## Typography
 
-**Interface Font:** Be Vietnam Pro (with Geist, Helvetica Neue, and sans-serif fallbacks)
+**Titles and Headers:** CookieRun, exposed as `--font-heading`, with the PF Beau Sans interface stack as fallback. Use Bold 700 for page titles, sheet titles, the welcome headline, and the Tally wordmark. Use Regular 400 for card, section, group, picker, and empty-state titles.
 
-**Financial Numerals:** Geist (with Helvetica Neue and sans-serif fallbacks)
+**Interface and Financial Numerals:** PF Beau Sans, exposed as `--font-ui` and shared by `--font-numeric`, with Helvetica Neue, Arial, and sans-serif fallbacks. Body copy, navigation, controls, field labels, row names, dates, amounts, and supporting metadata use PF Beau Sans.
 
-**Character:** Contemporary and distinctly legible in both Vietnamese and English, with enough weight for trust but no ornamental display face. Financial numerals stay compact and use tabular spacing. Interface copy uses real 400, 600, and 700 weights; editorial emphasis may use the bundled italic cuts instead of synthesized italics.
+**Character:** CookieRun gives headings a friendly, rounded character; PF Beau Sans keeps the working interface calm and readable in Vietnamese and English. CookieRun's real Regular 400 cut gives smaller headings enough presence, while Bold 700 establishes the main titles. Neutral tracking and a default 1.3 line height give Vietnamese accents room. PF Beau Sans uses real Regular 400, Book 500, SemiBold 600, and Bold 700 cuts. Book 500 is the body and field default, SemiBold 600 supports quieter emphasis, and Bold 700 defines controls, labels, and financial emphasis. Editorial emphasis uses the supplied Book Italic 500 cut. Synthetic bold and italic are disabled.
+
+**Calibration:** Compact text grows by 17% and larger headline and value ranges by 15%, with the same factor applied throughout each responsive size expression. Weight choices use the available static font cuts rather than numeric percentage interpolation: body moves to Book 500, medium emphasis to SemiBold 600, and labels and strong copy to Bold 700. Dominant values retain real Bold 700. CookieRun retains Regular 400 and Bold 700; their visible strokes also grow with the larger size.
+
+**Loading:** The supplied fonts are converted to local WOFF2 assets under `public/fonts` and declared in `app/fonts.css` with `font-display: swap`. The layout preloads PF Beau Sans Book and CookieRun Bold; CookieRun Regular and the remaining PF Beau Sans cuts load when used. Rendering does not depend on a remote font service.
 
 ### Hierarchy
 
-- **Display** (710, responsive 38–58px desktop / 31–40px mobile, 1): Balances and dominant totals.
-- **Headline** (720, responsive 21–28px, 1.1): Page greeting or primary title.
-- **Title** (680, 16px, 1.25): Card and section headings.
-- **Body** (430, 14px, 1.5): Guidance and contextual copy.
-- **Control** (680, 13px, 1.35): Primary and secondary button labels.
-- **Label** (620, 12px, 1.35): Controls, badges, row titles, and supporting values.
-- **Meta** (430, 11px, 1.35): Secondary dates, statuses, and helper copy. Ten pixels is reserved for chart ticks or constrained duplicate labels.
-- **Field** (400, 16px): Text and numeric input without mobile zoom.
+- **Display** (PF Beau Sans 700, responsive 43.7–66.7px desktop / 35.65–46px mobile token, 1, −0.03em): Balances and dominant totals. The phone balance composition further adapts its size to available width; exceptional amounts keep the existing compact-money treatment.
+- **Headline** (CookieRun 700, responsive 29.9–36.8px desktop / 29.9px mobile, 1.3): Page title. The welcome headline has its own 32.2–41.4px range and becomes 33.35px on phones.
+- **Sheet** (CookieRun 700, 27.6px desktop / 25.3px mobile, 1.3): Dialog titles.
+- **Section and Title** (CookieRun 400, 21.06px sections / 18.72px inner titles, 1.3): Card, balance-panel, section, picker, and empty-state headings. Compact group headings use 17.55px. The Tally wordmark uses 27.6px at 700.
+- **Body** (PF Beau Sans Book 500, 17.55px, 1.6): Guidance and contextual copy. Supporting emphasis uses an 18.72px size token and 700 weight.
+- **Control** (PF Beau Sans 700, 16.38px, 1.45): Primary and secondary button labels.
+- **Label** (PF Beau Sans 700, 15.21px, 1.45): Controls, badges, row names, and supporting values. SemiBold 600 is available for quieter control text.
+- **Meta** (PF Beau Sans Book 500, 14.04px, 1.45): Secondary dates, statuses, and helper copy. The 11.7px micro token is reserved for chart ticks or constrained duplicate labels.
+- **Field** (PF Beau Sans Book 500, 18.72px): Text and numeric input without mobile zoom.
 
-**The Numerals Lead Rule.** Financial values use tabular numerals and tighter tracking; labels remain compact and visually subordinate.
+**The Numerals Lead Rule.** Financial values use PF Beau Sans with consistent alignment and restrained tracking; labels remain visually subordinate. The supplied PF Beau Sans has tabular digit widths by default and includes the OpenType `tnum` feature. Numeric styles explicitly request `tabular-nums lining-nums` so amounts align as their values change. Keep full values accessible and adjust composition before reducing an amount's readable size.
 
 ## Layout
 
@@ -352,8 +394,8 @@ Reduced-motion mode removes spatial movement while preserving brief color and op
 
 Phosphor is the only interface and expense-category icon family. Use 20–21px icons for navigation and shell controls, 18px for inline actions, and 16px for compact badges/carets while retaining 44–48px hit targets. Subscription services use locally bundled Simple Icons brand marks or an unmodified verified official app asset where available, with the existing Tally monogram tile as a neutral fallback.
 
-- Inactive navigation uses `regular`; active navigation uses `fill` together with `aria-current` and the interaction accent treatment.
-- Passive page, field, picker, budget, and callout icons use `regular`; transaction-row category glyphs use `fill` so ledger identity stays opaque and immediately scannable at compact size.
+- Navigation uses `bold`; the active destination uses `fill` together with `aria-current` and the interaction accent treatment.
+- Page-title, source-account, field, picker, budget, and callout icons use `bold`; transaction-row category glyphs use `fill` so ledger identity stays opaque and immediately scannable at compact size.
 - CTA, edit, delete, close, and icon-only controls use `bold`.
 - Empty-state, hero, and privacy illustrations may use `duotone`.
 - Critical warning/status icons use `fill` and always sit beside explicit copy.
@@ -397,11 +439,23 @@ At 430px and below, transaction actions move to a dedicated second row so identi
 
 ### Destructive Feedback
 
-Destructive row changes expose an Undo toast until the user explicitly undoes or dismisses it; recovery is never removed by a short timer. Settings confirmations are inline disclosure groups: focus moves to the least-destructive action, Escape cancels the disclosure before it closes Settings, and cancelling restores the original trigger.
+Destructive row changes expose an Undo toast until the user explicitly undoes or dismisses it; recovery is never removed by a short timer. Undo must refuse a stale snapshot after intervening changes. Settings confirmations are inline disclosure groups: focus moves to the least-destructive action, Escape cancels the disclosure before it closes Settings, and cancelling restores the original trigger.
 
 ### Quiet Rows
 
-Transaction rows remain flat inside their parent surface and use a single hairline. Subscription previews on the overview are raised controls matching the reference; labels and metadata yield to tabular values, and leading marks use restrained 10px corners.
+Transaction rows remain flat inside their parent surface and use a single hairline. Subscription previews on the overview are raised controls matching the reference; labels and metadata yield to financial values in PF Beau Sans, and leading marks use restrained 10px corners.
+
+### Money Source Rows
+
+Group available-money sources separately from credit cards. Within each row, the source name and native balance lead; the source type or explicit debt/credit label follows. A converted VND estimate sits below the native amount, or gives way to a visible missing-rate message. Keep this hierarchy intact in both languages and themes, using PF Beau Sans numerals, semantic colors, and the existing touch-target sizes.
+
+### Account Sheets
+
+Source details, transfers, reconciliation, rates, and statements share the existing sheet surface, heading, labeled fields, and primary/secondary action patterns. A Back action changes the view within the sheet; Close returns to the surrounding app. Sheets retain keyboard focus, restore the opener on close, and prevent dismissal during a save. Failed saves keep the form open with an explicit error. Apply the established mobile sheet geometry and reduced-motion behavior rather than introducing another material or interaction system.
+
+### First-use Setup
+
+Onboarding uses the same pearl/graphite surfaces, teal actions, CookieRun headings, PF Beau Sans copy, and bold Phosphor icons. The main headline uses CookieRun Bold; supporting headings use Regular. Two steps lead from a concise welcome to actual source names and opening balances. Keep skip and personal-backup import available, with a clear explanation of the zero-cash starting point. Preview entered balances by source, separating credit-card debt from available money; do not introduce sample amounts or guessed exchange rates. Preserve entered fields when validation or saving fails, focus the first error, and disable repeated submission while saving. Completed or skipped setup leads into a contextual first-transaction prompt, which disappears after the first ledger entry.
 
 ## Do's and Don'ts
 
@@ -409,7 +463,7 @@ Transaction rows remain flat inside their parent surface and use a single hairli
 
 - **Do** keep the page ground pearl-grey and place primary content on near-white surfaces.
 - **Do** reserve Tally Teal in the light theme for the primary action, active destination, selected segment, focus, and sparse emphasis.
-- **Do** use tabular numerals for balances, amounts, dates, and percentages.
+- **Do** use PF Beau Sans tabular numerals for balances, amounts, dates, and percentages, and verify layouts at the full responsive type scale.
 - **Do** keep mobile tap targets at least 44px and preserve the 320px no-horizontal-scroll floor.
 - **Do** pair positive, negative, and warning color with explicit copy or labels.
 - **Do** use the canonical Tally icon without redrawing, recoloring, or adding a competing shadow treatment.

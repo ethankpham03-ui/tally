@@ -15,13 +15,11 @@ import {
   DownloadSimple,
   GearSix,
   House,
-  MagnifyingGlass,
   Moon,
   Pause,
   PencilSimple,
   Play,
   Plus,
-  Receipt,
   ShieldCheck,
   Sun,
   Trash,
@@ -44,7 +42,6 @@ import * as m from 'motion/react-m';
 import {
   type ChangeEvent,
   type FormEvent,
-  type ReactNode,
   useCallback,
   useEffect,
   useId,
@@ -56,12 +53,15 @@ import {
   EXPENSE_CATEGORY_DEFINITIONS,
   FINANCE_STORAGE_KEY,
   addDaysDateOnly,
-  createDemoData,
   createEmptyData,
+  completeOnboarding,
+  needsOnboarding,
+  skipOnboarding,
   createId,
   dateOnlyDayDifference,
   deriveBudgetUsage,
   deriveCashflowSeries,
+  deriveLiquiditySeries,
   deriveFinanceSummary,
   deriveSubscriptionTotals,
   isSafeSubscriptionAmount,
@@ -78,13 +78,22 @@ import {
   type Subscription,
   type SubscriptionCurrency,
   type Transaction,
-} from './finance-domain';
+  saveLedgerTransaction, deleteLedgerTransaction, type Account, type AccountInput,
+} from './finance-v4';
+import { createFinanceStorageController, type FinanceStorageController } from './finance-storage';
+import { initializeFinanceStorage } from './finance-bootstrap';
+import { OnboardingFlow } from './onboarding-ui';
+import { AccountsOverview, AccountsSheet, accountDisplayName } from './accounts-ui';
+import { TransactionSheet, TransactionList, TransactionsView, PaymentSheet, type LedgerDraft, type PaymentDraft } from './ledger-ui';
+import { SheetFrame, focusFirstInvalid } from './finance-dialog';
+import { financeError } from './finance-errors';
 import { CategoryIcon } from './category-icons';
 import { CategoryPicker, expenseCategoryIcon, expenseCategoryLabel } from './category-picker';
 import { APP_NAME, I18nProvider, useI18n, type Locale } from './i18n';
 import { VIEW_ORDER, viewDirection as getViewDirection, viewFromHashValue, type View } from './navigation';
 import { ServiceIcon } from './service-icons';
-import { APP_THEME_COLORS, type Theme } from './theme-colors.ts';
+import { type Theme } from './theme-colors.ts';
+import { applyTheme, initializeTheme } from './theme.ts';
 import {
   MANUAL_PLAN_ID,
   MANUAL_SERVICE_ID,
@@ -98,25 +107,19 @@ import {
   findCatalogServiceByName,
 } from './subscription-catalog';
 
-type TransactionType = 'income' | 'expense';
 type StorageStatus = 'loading' | 'saving' | 'saved' | 'error' | 'future';
-type StorageWarning = 'corrupt' | 'future' | 'error' | null;
+type StorageWarning = 'corrupt' | 'future' | 'error' | 'conflict' | null;
 type DialogState =
-  | { kind: 'transaction'; item?: Transaction }
+  | { kind: 'transaction'; item?: Transaction; accountId?: string; refundOf?: Transaction }
+  | { kind: 'accounts'; accountId?: string; transactionId?: string; transfer?: boolean }
+  | { kind: 'payment'; item: Subscription }
   | { kind: 'subscription'; item?: Subscription }
   | { kind: 'budget'; item?: Budget }
   | { kind: 'settings' }
   | null;
 type ToastMessage = { id: number; message: string; undo?: () => void };
-type TransactionInput = {
-  title: string;
-  category: ExpenseCategoryId;
-  date: string;
-  amount: number;
-  type: TransactionType;
-  customCategory?: CustomExpenseCategory;
-};
 type SubscriptionInput = {
+  accountId?: string;
   serviceId?: string;
   planId?: string;
   name: string;
@@ -200,7 +203,7 @@ function shouldMoveFocusAfterViewChange() {
 
 function PageIcon({ view }: { view: View }) {
   const Icon = (navItems.find((item) => item.id === view) ?? navItems[0]).icon;
-  return <Icon size={20} weight="regular" aria-hidden="true" />;
+  return <Icon size={22} weight="bold" aria-hidden="true" />;
 }
 
 function AppLoadingShell({ label }: { label: string }) {
@@ -324,10 +327,11 @@ export default function FinanceApp() {
 }
 
 function AppContent() {
-  const { c, t, isLocaleHydrated } = useI18n();
+  const { c, t, locale, isLocaleHydrated } = useI18n();
+  const vi = locale === 'vi';
   const shouldReduceMotion = useReducedMotion();
   const [today, setToday] = useState(localTodayIso);
-  const [data, setData] = useState<FinanceData>(() => createDemoData());
+  const [data, setData] = useState<FinanceData>(() => createEmptyData());
   const [view, setView] = useState<View>('overview');
   const [viewDirection, setViewDirection] = useState<1 | -1>(1);
   const [dialog, setDialog] = useState<DialogState>(null);
@@ -336,10 +340,17 @@ function AppContent() {
   const [hydrated, setHydrated] = useState(false);
   const [storageStatus, setStorageStatus] = useState<StorageStatus>('loading');
   const [storageWarning, setStorageWarning] = useState<StorageWarning>(null);
+  const [protectedStorage, setProtectedStorage] = useState(false);
+  const [limitedWriteProtection, setLimitedWriteProtection] = useState(false);
+  const [storageRetry, setStorageRetry] = useState(0);
   const activeViewRef = useRef<View>('overview');
   const dialogOpener = useRef<HTMLElement | null>(null);
   const pendingViewFocusRef = useRef(false);
-  const lastPersistedPayloadRef = useRef<string | null>(null);
+  const storageController = useRef<FinanceStorageController | null>(null);
+  const dataRef = useRef(data);
+  const savingRef = useRef(false);
+  const dialogRevisionRef = useRef<number | null>(null);
+  const [lastAccountId, setLastAccountId] = useState<string>();
   const toastSequence = useRef(0);
 
   const commitView = useCallback((nextView: View) => {
@@ -365,7 +376,7 @@ function AppContent() {
   const budgetUsage = useMemo(() => deriveBudgetUsage(data, reference), [data, reference]);
   const subscriptionTotals = useMemo(() => deriveSubscriptionTotals(activeSubscriptions), [activeSubscriptions]);
   const appReady = hydrated && isLocaleHydrated;
-  const persistenceBlocked = storageStatus === 'future';
+  const persistenceBlocked = protectedStorage;
   const mutationsDisabled = !appReady || persistenceBlocked;
 
   useEffect(() => {
@@ -391,73 +402,44 @@ function AppContent() {
   }, [commitView]);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      let nextData = createDemoData();
-      try {
-        const raw = window.localStorage.getItem(FINANCE_STORAGE_KEY);
-        const parsed = parseFinanceData(raw);
-        if (parsed.status === 'ok') {
-          nextData = parsed.data;
-          lastPersistedPayloadRef.current = parsed.migrated ? raw : serializeFinanceData(parsed.data);
-          setStorageStatus('saved');
-        } else if (parsed.status === 'future-version') {
-          setStorageStatus('future');
-          setStorageWarning('future');
-        } else if (parsed.status === 'corrupt') {
-          if (raw) window.localStorage.setItem(`${FINANCE_STORAGE_KEY}-unreadable-backup`, raw);
-          setStorageWarning('corrupt');
-          setStorageStatus('saving');
-        } else {
-          setStorageStatus('saving');
-        }
-      } catch {
-        lastPersistedPayloadRef.current = serializeFinanceData(nextData);
-        setStorageStatus('error');
-        setStorageWarning('error');
+    const controller = createFinanceStorageController();
+    storageController.current = controller;
+    let cancelled = false;
+    let sequence = 0;
+    const applyLoad = async () => {
+      const currentSequence = ++sequence;
+      const loaded = await initializeFinanceStorage(controller);
+      if (cancelled || currentSequence !== sequence) return;
+      setProtectedStorage(loaded.status !== 'ok' && loaded.status !== 'missing');
+      setLimitedWriteProtection(!navigator.locks);
+      if (loaded.status === 'ok') {
+        dataRef.current = loaded.data;
+        setData(loaded.data);
+        setStorageStatus('saved');
+        setStorageWarning(null);
+      } else if (loaded.status === 'missing') {
+        const empty = createEmptyData();
+        dataRef.current = empty;
+        setData(empty);
+        setStorageStatus('saved');
+        setStorageWarning(null);
+      } else {
+        setStorageStatus(loaded.status === 'future' ? 'future' : 'error');
+        setStorageWarning(loaded.status === 'future' ? 'future' : loaded.status === 'corrupt' ? 'corrupt' : 'error');
       }
-      setData(nextData);
       setHydrated(true);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated || persistenceBlocked) return;
-    const payload = serializeFinanceData(data);
-    if (payload === lastPersistedPayloadRef.current) return;
-    const statusTimer = window.setTimeout(() => setStorageStatus('saving'), 0);
-    const timer = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(FINANCE_STORAGE_KEY, payload);
-        lastPersistedPayloadRef.current = payload;
-        setStorageStatus('saved');
-      } catch {
-        setStorageStatus('error');
-      }
-    }, 260);
-    return () => {
-      window.clearTimeout(statusTimer);
-      window.clearTimeout(timer);
     };
-  }, [data, hydrated, persistenceBlocked]);
-
-  useEffect(() => {
-    const syncFromAnotherTab = (event: StorageEvent) => {
-      if (event.key !== FINANCE_STORAGE_KEY || !event.newValue) return;
-      const parsed = parseFinanceData(event.newValue);
-      if (parsed.status === 'ok') {
-        lastPersistedPayloadRef.current = parsed.migrated ? event.newValue : serializeFinanceData(parsed.data);
-        setData(parsed.data);
-        setStorageStatus('saved');
-      }
+    const frame = window.requestAnimationFrame(() => { void applyLoad(); });
+    const sync = (event: StorageEvent) => {
+      if ((event.key === FINANCE_STORAGE_KEY || event.key === 'tally-finance-v1' || event.key === null) && !savingRef.current) void applyLoad();
     };
-    window.addEventListener('storage', syncFromAnotherTab);
-    return () => window.removeEventListener('storage', syncFromAnotherTab);
-  }, []);
+    window.addEventListener('storage', sync);
+    return () => { cancelled = true; window.cancelAnimationFrame(frame); window.removeEventListener('storage', sync); };
+  }, [storageRetry]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+      setTheme(initializeTheme());
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -474,26 +456,65 @@ function AppContent() {
     setToast({ id: toastSequence.current, message, undo });
   }
 
-  function updateData(updater: (current: FinanceData) => FinanceData, mode: FinanceData['mode'] = 'personal') {
-    if (persistenceBlocked) return;
-    setData((current) => ({
-      ...updater(current),
-      mode,
-      updatedAt: new Date().toISOString(),
-    }));
+  async function updateData(updater: (current: FinanceData) => FinanceData, mode: FinanceData['mode'] = 'personal'): Promise<FinanceData> {
+    if (persistenceBlocked || !storageController.current) throw new Error(vi ? 'Dữ liệu đang được bảo vệ. Hãy kiểm tra cảnh báo lưu trữ.' : 'The saved ledger is protected. Check the storage warning.');
+    if (savingRef.current) throw new Error(vi ? 'Đang lưu thay đổi trước. Vui lòng thử lại.' : 'The previous change is still saving. Please try again.');
+    const current = dataRef.current;
+    if (dialogRevisionRef.current !== null && dialogRevisionRef.current !== current.revision) {
+      throw new Error(vi ? 'Dữ liệu đã thay đổi khi biểu mẫu đang mở. Đóng và mở lại biểu mẫu để dùng bản mới nhất.' : 'The ledger changed while this form was open. Close and reopen it to use the latest data.');
+    }
+    let next: FinanceData;
+    try { next = { ...updater(current), mode, updatedAt: new Date().toISOString() }; }
+    catch (error) { throw new Error(financeError(error, locale)); }
+    savingRef.current = true;
+    setStorageStatus('saving');
+    try {
+      const result = await storageController.current.commit(next, current.revision);
+      if (result.status === 'saved') {
+        dataRef.current = result.data;
+        setData(result.data);
+        setStorageStatus('saved');
+        setStorageWarning(null);
+        if (dialogRevisionRef.current !== null) dialogRevisionRef.current = result.data.revision;
+        setLimitedWriteProtection(result.protection === 'revision-check');
+        return result.data;
+      }
+      if (result.status === 'conflict') {
+        const latest = await initializeFinanceStorage(storageController.current);
+        if (latest.status === 'ok') { dataRef.current = latest.data; setData(latest.data); }
+        else if (latest.status === 'missing') { const empty = createEmptyData(); dataRef.current = empty; setData(empty); }
+        setProtectedStorage(latest.status !== 'ok' && latest.status !== 'missing');
+        setStorageStatus('error'); setStorageWarning('conflict');
+        throw new Error(vi ? 'Dữ liệu đã thay đổi ở tab khác. Bản mới đã được nạp; đóng rồi mở lại biểu mẫu trước khi lưu.' : 'Another tab changed the ledger. The latest version is loaded; close and reopen this form before saving.');
+      }
+      setStorageStatus('error');
+      if (result.status === 'blocked') {
+        const latest = storageController.current.load();
+        setProtectedStorage(latest.status === 'future' || latest.status === 'corrupt');
+        if (latest.status === 'future') { setStorageStatus('future'); setStorageWarning('future'); }
+        else if (latest.status === 'corrupt') setStorageWarning('corrupt');
+      }
+      throw new Error(vi ? 'Không lưu được trên thiết bị. Dữ liệu trước đó vẫn được giữ; thử lại hoặc xuất bản sao lưu.' : 'Could not save on this device. Your previous data is intact; retry or export a backup.');
+    } finally { savingRef.current = false; }
   }
 
-  function restoreSnapshot(snapshot: FinanceData, message: string) {
-    setData({ ...snapshot, updatedAt: new Date().toISOString() });
-    showToast(message);
+  async function restoreSnapshot(snapshot: FinanceData, message: string, expectedRevision: number | null) {
+    if (expectedRevision === null || dataRef.current.revision !== expectedRevision) {
+      showToast(vi ? 'Dữ liệu đã thay đổi. Không thể hoàn tác bản cũ; hãy sửa giao dịch cần thay đổi.' : 'The ledger has changed. Edit the affected transaction instead of undoing an older snapshot.');
+      return;
+    }
+    try { await updateData(() => snapshot, snapshot.mode); showToast(message); }
+    catch (error) { showToast(financeError(error, locale)); }
   }
 
   function openDialog(next: Exclude<DialogState, null>) {
     dialogOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRevisionRef.current = dataRef.current.revision;
     setDialog(next);
   }
 
   function closeDialog() {
+    dialogRevisionRef.current = null;
     setDialog(null);
   }
 
@@ -526,54 +547,49 @@ function AppContent() {
   function toggleTheme() {
     const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
     const next: Theme = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
-    document.documentElement.style.colorScheme = next;
-    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', APP_THEME_COLORS[next]);
+    applyTheme(next);
     try { window.localStorage.setItem('tally-theme', next); } catch { /* Keep the in-session theme. */ }
     setTheme(next);
   }
 
-  function saveTransaction(input: TransactionInput, existing?: Transaction) {
-    const signedAmount = input.type === 'income' ? input.amount : -input.amount;
-    const transaction: Transaction = {
-      ...(existing ?? {}),
-      id: existing?.id ?? createId('transaction'),
-      title: input.title,
-      titleKey: undefined,
-      category: input.type === 'income' ? 'income' : input.category,
-      date: input.date,
-      amount: signedAmount,
-    };
-    updateData((current) => ({
-      ...current,
-      customCategories: input.customCategory && !current.customCategories.some((item) => item.id === input.customCategory?.id)
-        ? [...current.customCategories, input.customCategory]
-        : current.customCategories,
-      transactions: existing
-        ? current.transactions.map((item) => item.id === existing.id ? transaction : item)
-        : [...current.transactions, transaction],
-    }));
+  async function saveTransaction(input: LedgerDraft, existing?: Transaction) {
+    const sign = input.kind === 'expense' ? -1 : 1;
+    const sameValuation = existing && existing.accountId === input.accountId && existing.amount === sign * input.amount
+      && existing.date === input.date && existing.reportingAmount === (input.reportingAmount === undefined ? undefined : sign * input.reportingAmount);
+    await updateData((current) => {
+      const withCategory = input.customCategory && !current.customCategories.some((item) => item.id === input.customCategory?.id)
+        ? { ...current, customCategories: [...current.customCategories, input.customCategory] } : current;
+      return saveLedgerTransaction(withCategory, {
+        ...(existing ?? {}), title: input.title, titleKey: undefined, kind: input.kind, accountId: input.accountId,
+        category: input.kind === 'income' ? 'income' : input.category, date: input.date, amount: sign * input.amount,
+        reportingAmount: input.reportingAmount === undefined ? undefined : sign * input.reportingAmount,
+        reportingRate: sameValuation ? existing.reportingRate : undefined, originalAmount: input.originalAmount, originalCurrency: input.originalCurrency,
+        refundOfId: input.kind === 'refund' ? input.refundOfId : undefined,
+      }, existing?.id);
+    });
+    setLastAccountId(input.accountId);
     showToast(existing ? c.toast.transactionUpdated : c.toast.transactionAdded);
   }
 
-  function deleteTransaction(id: string) {
-    const transaction = data.transactions.find((item) => item.id === id);
-    if (!transaction) return;
-    const snapshot = data;
-    updateData((current) => ({
-      ...current,
-      transactions: current.transactions.filter((item) => item.id !== id),
-      subscriptionPayments: transaction.subscriptionPaymentId
-        ? current.subscriptionPayments.filter((item) => item.id !== transaction.subscriptionPaymentId)
-        : current.subscriptionPayments,
-    }));
-    showToast(c.toast.transactionDeleted, () => restoreSnapshot(snapshot, c.toast.transactionRestored));
+  async function deleteTransaction(id: string) {
+    const snapshot = dataRef.current;
+    try {
+      const saved = await updateData((current) => deleteLedgerTransaction(current, id));
+      showToast(c.toast.transactionDeleted, () => { void restoreSnapshot(snapshot, c.toast.transactionRestored, saved.revision); });
+    } catch (error) { showToast(financeError(error, locale)); }
   }
 
-  function saveSubscription(input: SubscriptionInput, existing?: Subscription) {
+  function editTransaction(item: Transaction) {
+    const transfer = item.kind === 'transfer' ? item : item.groupId ? data.transactions.find((entry) => entry.groupId === item.groupId && entry.kind === 'transfer') : undefined;
+    if (transfer) openDialog({ kind: 'accounts', accountId: transfer.accountId, transactionId: transfer.id });
+    else openDialog({ kind: 'transaction', item });
+  }
+
+  async function saveSubscription(input: SubscriptionInput, existing?: Subscription) {
     const subscription: Subscription = {
       ...(existing ?? {}),
       id: existing?.id ?? createId('subscription'),
+      accountId: input.accountId,
       serviceId: input.serviceId,
       planId: input.planId,
       name: input.name,
@@ -588,7 +604,7 @@ function AppContent() {
       monogram: input.name.slice(0, 1).toUpperCase(),
       tone: existing?.tone ?? serviceTones[data.subscriptions.length % serviceTones.length],
     };
-    updateData((current) => ({
+    await updateData((current) => ({
       ...current,
       subscriptions: existing
         ? current.subscriptions.map((item) => item.id === existing.id ? subscription : item)
@@ -597,43 +613,46 @@ function AppContent() {
     showToast(existing ? c.toast.subscriptionUpdated : c.toast.subscriptionAdded);
   }
 
-  function toggleSubscription(id: string) {
-    const subscription = data.subscriptions.find((item) => item.id === id);
+  async function toggleSubscription(id: string) {
+    const subscription = dataRef.current.subscriptions.find((item) => item.id === id);
     if (!subscription) return;
     const willResume = subscription.status === 'paused';
-    updateData((current) => ({
-      ...current,
-      subscriptions: current.subscriptions.map((item) => {
+    try {
+      await updateData((current) => ({ ...current, subscriptions: current.subscriptions.map((item) => {
         if (item.id !== id) return item;
-        if (item.status === 'paused') return { ...item, status: item.previousStatus ?? 'active', previousStatus: undefined };
-        return { ...item, previousStatus: item.status, status: 'paused' };
-      }),
-    }));
-    showToast(t(willResume ? 'toast.trackingResumed' : 'toast.trackingPaused', { name: subscription.name }));
+        return item.status === 'paused' ? { ...item, status: item.previousStatus ?? 'active', previousStatus: undefined }
+          : { ...item, previousStatus: item.status, status: 'paused' };
+      }) }));
+      showToast(t(willResume ? 'toast.trackingResumed' : 'toast.trackingPaused', { name: subscription.name }));
+    } catch (error) { showToast(financeError(error, locale)); }
   }
 
-  function deleteSubscription(id: string) {
-    if (!data.subscriptions.some((item) => item.id === id)) return;
-    const snapshot = data;
-    updateData((current) => ({ ...current, subscriptions: current.subscriptions.filter((item) => item.id !== id) }));
-    showToast(c.toast.subscriptionDeleted, () => restoreSnapshot(snapshot, c.toast.subscriptionRestored));
+  async function deleteSubscription(id: string) {
+    const snapshot = dataRef.current;
+    try {
+      const saved = await updateData((current) => ({ ...current, subscriptions: current.subscriptions.filter((item) => item.id !== id) }));
+      showToast(c.toast.subscriptionDeleted, () => { void restoreSnapshot(snapshot, c.toast.subscriptionRestored, saved.revision); });
+    } catch (error) { showToast(financeError(error, locale)); }
   }
 
-  function recordPayment(id: string) {
-    const snapshot = data;
-    const result = recordSubscriptionPayment(data, id, today);
-    if (result.status === 'unsupported-currency') {
-      showToast(c.toast.paymentCurrencyUnsupported);
-      return;
-    }
-    if (result.status !== 'recorded') return;
-    updateData(() => result.data);
-    showToast(c.toast.paymentRecorded, () => restoreSnapshot(snapshot, c.toast.paymentReverted));
+  async function recordPayment(id: string, input: PaymentDraft) {
+    const snapshot = dataRef.current;
+    const saved = await updateData((current) => {
+      const result = recordSubscriptionPayment(current, id, input.paidOn, {
+        expectedOccurrence: input.expectedOccurrence, accountId: input.accountId, amount: input.amount,
+        reportingAmount: input.reportingAmount === undefined ? undefined : -input.reportingAmount,
+      });
+      if (result.status !== 'recorded') throw new Error(result.status === 'already-recorded' || result.status === 'stale-occurrence'
+        ? (vi ? 'Kỳ này đã được ghi nhận hoặc ngày gia hạn đã thay đổi. Đóng biểu mẫu rồi kiểm tra lịch sử.' : 'This renewal was already recorded or has changed. Close this form and review its history.')
+        : (vi ? 'Không thể ghi nhận kỳ này. Kiểm tra nguồn thanh toán và ngày.' : 'Could not record this renewal. Check the account and payment date.'));
+      return result.data;
+    });
+    showToast(c.toast.paymentRecorded, () => { void restoreSnapshot(snapshot, c.toast.paymentReverted, saved.revision); });
   }
 
-  function saveBudget(input: BudgetInput, existing?: Budget) {
+  async function saveBudget(input: BudgetInput, existing?: Budget) {
     const budget: Budget = { id: existing?.id ?? createId('budget'), category: input.category, limit: input.limit };
-    updateData((current) => ({
+    await updateData((current) => ({
       ...current,
       customCategories: input.customCategory && !current.customCategories.some((item) => item.id === input.customCategory?.id)
         ? [...current.customCategories, input.customCategory]
@@ -645,20 +664,48 @@ function AppContent() {
     showToast(existing ? c.toast.budgetUpdated : c.toast.budgetAdded);
   }
 
-  function deleteBudget(id: string) {
-    if (!data.budgets.some((item) => item.id === id)) return;
-    const snapshot = data;
-    updateData((current) => ({ ...current, budgets: current.budgets.filter((item) => item.id !== id) }));
-    showToast(c.toast.budgetDeleted, () => restoreSnapshot(snapshot, c.toast.budgetRestored));
+  async function deleteBudget(id: string) {
+    const snapshot = dataRef.current;
+    try {
+      const saved = await updateData((current) => ({ ...current, budgets: current.budgets.filter((item) => item.id !== id) }));
+      showToast(c.toast.budgetDeleted, () => { void restoreSnapshot(snapshot, c.toast.budgetRestored, saved.revision); });
+    } catch (error) { showToast(financeError(error, locale)); }
   }
 
-  function replaceAllData(nextData: FinanceData, message: string) {
-    setData({ ...nextData, updatedAt: new Date().toISOString() });
-    setStorageWarning(null);
-    setStorageStatus('saving');
+  async function replaceAllData(nextData: FinanceData, message: string) {
+    await updateData(() => nextData, nextData.mode);
     commitView('overview');
     window.history.replaceState(null, '', '#overview');
     showToast(message);
+  }
+
+  async function finishWelcome(inputs?: AccountInput[], date?: string) {
+    // A form from another tab must never replace that tab's completed setup.
+    const expectedRevision = data.revision;
+    await updateData((current) => {
+      if (current.revision !== expectedRevision) throw new Error(vi ? 'Dữ liệu đã thay đổi. Hãy tải lại trước khi thiết lập.' : 'The ledger changed. Reload before setting up your accounts.');
+      return inputs && date ? completeOnboarding(current, inputs, date) : skipOnboarding(current);
+    });
+    commitView('overview');
+    window.history.replaceState(null, '', '#overview');
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      const heading = Array.from(document.querySelectorAll<HTMLElement>('[data-page-focus]')).find((element) => element.offsetParent !== null);
+      heading?.focus();
+    });
+  }
+
+  function exportProtectedData() {
+    try {
+      const raw = window.localStorage.getItem(FINANCE_STORAGE_KEY) ?? window.localStorage.getItem('tally-finance-v1');
+      if (raw === null) throw new Error('No stored document');
+      const url = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `tally-recovery-${localTodayIso()}.json`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch { setStorageWarning('error'); }
   }
 
   if (!appReady) return <AppLoadingShell label={c.storage.loading} />;
@@ -674,37 +721,52 @@ function AppContent() {
         : storageStatus === 'future'
           ? c.storage.readOnly
           : c.storage.error;
-  const storageWarningCopy = storageWarning === 'corrupt'
-    ? c.storage.corruptWarning
+  const storageWarningCopy = storageWarning === 'conflict'
+    ? (vi ? 'Dữ liệu vừa thay đổi ở tab khác. Kiểm tra bản mới trước khi lưu lại.' : 'Another tab changed the ledger. Review the latest data before saving again.')
+    : storageWarning === 'corrupt'
+    ? (vi ? 'Không đọc được dữ liệu đã lưu. Bản gốc được giữ nguyên và chưa bị ghi đè.' : 'The saved ledger cannot be read. Its original contents have been preserved.')
     : storageWarning === 'future'
       ? c.storage.futureVersionWarning
       : storageWarning === 'error'
         ? c.storage.error
         : null;
   const activeDialog = dialog?.kind === 'transaction'
-    ? <TransactionSheet key={`transaction-${dialog.item?.id ?? 'new'}`} initial={dialog.item} today={today} customCategories={data.customCategories} onClose={closeDialog} onSave={saveTransaction} />
+    ? <TransactionSheet key={'transaction-' + (dialog.item?.id ?? dialog.refundOf?.id ?? 'new')} data={data} initial={dialog.item} initialAccountId={dialog.accountId ?? lastAccountId} refundOf={dialog.refundOf} today={today} onClose={closeDialog} onSave={saveTransaction} onManageAccounts={() => openDialog({ kind: 'accounts' })} />
+    : dialog?.kind === 'accounts'
+      ? <AccountsSheet key="accounts" data={data} onChange={updateData} onClose={closeDialog} initialAccountId={dialog.accountId} initialTransactionId={dialog.transactionId} initialTransfer={dialog.transfer} onAddTransaction={(accountId) => openDialog({ kind: 'transaction', accountId })} onEditTransaction={editTransaction} />
+    : dialog?.kind === 'payment'
+      ? <PaymentSheet key={'payment-' + dialog.item.id} data={data} subscription={dialog.item} today={today} onClose={closeDialog} onSave={(input) => recordPayment(dialog.item.id, input)} onManageAccounts={() => openDialog({ kind: 'accounts' })} />
     : dialog?.kind === 'subscription'
-      ? <SubscriptionSheet key={`subscription-${dialog.item?.id ?? 'new'}`} initial={dialog.item} today={today} onClose={closeDialog} onSave={saveSubscription} />
-      : dialog?.kind === 'budget'
-        ? <BudgetSheet key={`budget-${dialog.item?.id ?? 'new'}`} initial={dialog.item} budgets={data.budgets} customCategories={data.customCategories} onClose={closeDialog} onSave={saveBudget} />
-        : dialog?.kind === 'settings'
-          ? (
-              <SettingsSheet
-                key="settings"
-                data={data}
-                storageStatus={storageStatus}
-                onClose={closeDialog}
-                onOpeningBalance={(openingBalance) => {
-                  updateData((current) => ({ ...current, openingBalance }));
-                  showToast(c.toast.openingBalanceUpdated);
-                }}
-                onRestoreSample={() => replaceAllData(createDemoData(), c.toast.demoRestored)}
-                onClear={() => replaceAllData(createEmptyData(), c.toast.dataCleared)}
-                onImport={(nextData) => replaceAllData(nextData, c.toast.dataImported)}
-                onNotify={showToast}
-              />
-            )
-          : null;
+      ? <SubscriptionSheet key={'subscription-' + (dialog.item?.id ?? 'new')} initial={dialog.item} accounts={data.accounts} today={today} onClose={closeDialog} onSave={saveSubscription} />
+    : dialog?.kind === 'budget'
+      ? <BudgetSheet key={'budget-' + (dialog.item?.id ?? 'new')} initial={dialog.item} budgets={data.budgets} customCategories={data.customCategories} onClose={closeDialog} onSave={saveBudget} />
+    : dialog?.kind === 'settings'
+      ? <SettingsSheet data={data} storageStatus={storageStatus} onClose={closeDialog} onManageAccounts={() => openDialog({ kind: 'accounts' })}
+          importOnly={needsOnboarding(data)} onClear={() => replaceAllData(createEmptyData(), c.toast.dataCleared)}
+          onImport={(nextData) => replaceAllData(nextData, c.toast.dataImported)} onNotify={showToast} />
+    : null;
+
+  if (needsOnboarding(data) || persistenceBlocked) return (
+    <main className="onboarding-shell">
+      <header className="onboarding-appbar">
+        <span className="brand"><span className="brand-mark" aria-hidden="true"><Image src="/tally-icon-192.png" alt="" width={84} height={84} sizes="42px" quality={100} priority /></span><span>{APP_NAME}</span></span>
+        <div className="appbar-actions"><LanguageSwitch /><ThemeControl theme={theme} onToggle={toggleTheme} /></div>
+      </header>
+      {persistenceBlocked ? (
+        <section className="onboarding-recovery surface-raised" aria-labelledby="recovery-title">
+          <WarningCircle size={34} weight="bold" aria-hidden="true" />
+          <h1 id="recovery-title">{vi ? 'Chưa thể mở dữ liệu trên thiết bị' : 'Your saved data could not be opened'}</h1>
+          <p role="alert">{storageWarningCopy}</p>
+          <p>{vi ? 'Tally đã tạm dừng thay đổi. Bạn có thể thử lại hoặc tải bản gốc để giữ một bản sao.' : 'Changes are paused. Retry, or download the original document to keep a copy.'}</p>
+          <div><button type="button" className="primary-action" onClick={() => { setHydrated(false); setStorageRetry((value) => value + 1); }}>{vi ? 'Thử lại' : 'Try again'}</button><button type="button" className="secondary-action" onClick={exportProtectedData}><DownloadSimple size={20} weight="bold" />{vi ? 'Tải bản gốc' : 'Download original'}</button></div>
+        </section>
+      ) : <>
+        {storageWarningCopy && <p className="storage-warning" role="alert">{storageWarningCopy}</p>}
+        <OnboardingFlow key={data.revision} onComplete={(inputs, date) => finishWelcome(inputs, date)} onSkip={() => finishWelcome()} onImport={() => openDialog({ kind: 'settings' })} />
+        <AnimatePresence initial={false} mode="wait" onExitComplete={restoreDialogFocus}>{activeDialog}</AnimatePresence>
+      </>}
+    </main>
+  );
 
   return (
     <main className="app-frame" aria-busy={!hydrated}>
@@ -718,7 +780,7 @@ function AppContent() {
             const Icon = item.icon;
             return (
               <button className={`nav-button ${view === item.id ? 'is-active' : ''}`} key={item.id} type="button" onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined} aria-label={c.nav[item.id]} title={c.nav[item.id]}>
-                <m.i className="nav-icon" aria-hidden="true" animate={{ opacity: view === item.id ? 1 : 0.76, scale: view === item.id ? 1 : 0.92 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18 }}><Icon size={21} weight={view === item.id ? 'fill' : 'regular'} aria-hidden="true" /></m.i><span>{c.nav[item.id]}</span>
+                <m.i className="nav-icon" aria-hidden="true" animate={{ opacity: view === item.id ? 1 : 0.8, scale: view === item.id ? 1 : 0.94 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18 }}><Icon size={21} weight={view === item.id ? 'fill' : 'bold'} aria-hidden="true" /></m.i><span>{c.nav[item.id]}</span>
               </button>
             );
           })}
@@ -749,7 +811,6 @@ function AppContent() {
             <p className="page-context">{c.header.context[view]}</p>
           </div>
           <div className="header-actions">
-            {data.mode === 'demo' && <span className="demo-badge">{c.common.demoData}</span>}
             <span className={`storage-badge is-${storageStatus}`} title={c.storage.localOnly}><i aria-hidden="true" />{storageLabel}</span>
             <LanguageSwitch />
             <ThemeControl theme={theme} onToggle={toggleTheme} className="desktop-only" />
@@ -758,12 +819,24 @@ function AppContent() {
         </header>
 
         {storageWarningCopy && <div className="storage-warning" role="status"><WarningCircle size={19} weight="fill" aria-hidden="true" /><span>{storageWarningCopy}</span><button type="button" onClick={() => setStorageWarning(null)} aria-label={c.common.close}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
+        {limitedWriteProtection && <p className="valuation-note">{vi ? 'Trình duyệt này có giới hạn bảo vệ khi lưu đồng thời. Hãy chỉnh sửa trong một tab Tally mỗi lần.' : 'This browser has limited protection for simultaneous saves. Edit in one Tally tab at a time.'}</p>}
+
+        {view === 'overview' && data.transactions.length === 0 && (data.onboarding === 'completed' || data.onboarding === 'skipped') && (
+          <section className="first-entry-prompt" aria-labelledby="first-entry-title">
+            <div><h2 id="first-entry-title">{vi ? 'Bắt đầu với giao dịch đầu tiên' : 'Start with your first transaction'}</h2><p>{data.onboarding === 'skipped'
+              ? (vi ? 'Bạn có thể thêm nguồn, cập nhật số dư trong Nguồn tiền hoặc ghi một khoản thu chi để bắt đầu.' : 'Add accounts, update balances in Accounts, or record income and spending to get started.')
+              : (vi ? 'Nguồn tiền đã sẵn sàng. Chọn nguồn thực tế khi ghi thu chi để số dư từng nơi luôn rõ ràng.' : 'Your accounts are ready. Choose the account you use when recording income or spending to keep each balance clear.')}</p></div>
+            <button type="button" className="primary-action" disabled={mutationsDisabled} onClick={() => openDialog({ kind: 'transaction' })}><Plus size={20} weight="bold" aria-hidden="true" />{vi ? 'Ghi giao dịch' : 'Add transaction'}</button>
+          </section>
+        )}
 
         <div className="view-stage" inert={mutationsDisabled ? true : undefined}>
           <AnimatePresence initial={false} mode="wait" custom={viewDirection} onExitComplete={focusPendingView}>
             <m.div className="view-motion-layer" key={view} custom={viewDirection} variants={viewMotionVariants} initial="enter" animate="center" exit="exit">
               {view === 'overview' && (
                 <Overview
+                  data={data}
+                  onAccounts={(accountId) => openDialog({ kind: 'accounts', accountId })}
                   summary={summary}
                   transactions={transactions}
                   subscriptions={activeSubscriptions}
@@ -774,9 +847,10 @@ function AppContent() {
                   onAddTransaction={() => openDialog({ kind: 'transaction' })}
                 />
               )}
-              {view === 'transactions' && <TransactionsView transactions={transactions} customCategories={data.customCategories} onDelete={deleteTransaction} onEdit={(item) => openDialog({ kind: 'transaction', item })} onAdd={() => openDialog({ kind: 'transaction' })} />}
+              {view === 'transactions' && <TransactionsView data={data} transactions={transactions} onDelete={deleteTransaction} onEdit={editTransaction} onRefund={(refundOf) => openDialog({ kind: 'transaction', refundOf })} onTransfer={() => openDialog({ kind: 'accounts', transfer: true })} onAdd={() => openDialog({ kind: 'transaction' })} />}
               {view === 'subscriptions' && (
                 <SubscriptionsView
+                  accounts={data.accounts}
                   subscriptions={data.subscriptions}
                   totals={subscriptionTotals}
                   today={today}
@@ -784,7 +858,7 @@ function AppContent() {
                   onEdit={(item) => openDialog({ kind: 'subscription', item })}
                   onToggle={toggleSubscription}
                   onDelete={deleteSubscription}
-                  onRecordPayment={recordPayment}
+                  onRecordPayment={(id) => { const item = data.subscriptions.find((subscription) => subscription.id === id); if (item) openDialog({ kind: 'payment', item }); }}
                 />
               )}
               {view === 'budgets' && <BudgetsView usage={budgetUsage} customCategories={data.customCategories} today={today} onAdd={() => openDialog({ kind: 'budget' })} onEdit={(item) => openDialog({ kind: 'budget', item })} onDelete={deleteBudget} />}
@@ -796,19 +870,19 @@ function AppContent() {
       <nav className="mobile-bottom-nav" aria-label={c.nav.mobileAria}>
         {navItems.slice(0, 2).map((item) => {
           const Icon = item.icon;
-          return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><m.i className="nav-icon" aria-hidden="true" animate={{ opacity: view === item.id ? 1 : 0.76, scale: view === item.id ? 1 : 0.92 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18 }}><Icon size={21} weight={view === item.id ? 'fill' : 'regular'} aria-hidden="true" /></m.i><span>{c.nav[item.id]}</span></button>;
+          return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><m.i className="nav-icon" aria-hidden="true" animate={{ opacity: view === item.id ? 1 : 0.8, scale: view === item.id ? 1 : 0.94 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18 }}><Icon size={21} weight={view === item.id ? 'fill' : 'bold'} aria-hidden="true" /></m.i><span>{c.nav[item.id]}</span></button>;
         })}
         <button className="mobile-add" type="button" disabled={mutationsDisabled} onClick={() => openDialog({ kind: primaryDialogKind })} aria-label={primaryLabel}><Plus size={25} weight="bold" aria-hidden="true" /></button>
         {navItems.slice(2).map((item) => {
           const Icon = item.icon;
-          return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><m.i className="nav-icon" aria-hidden="true" animate={{ opacity: view === item.id ? 1 : 0.76, scale: view === item.id ? 1 : 0.92 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18 }}><Icon size={21} weight={view === item.id ? 'fill' : 'regular'} aria-hidden="true" /></m.i><span>{c.nav[item.id]}</span></button>;
+          return <button key={item.id} type="button" className={view === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)} aria-current={view === item.id ? 'page' : undefined}><m.i className="nav-icon" aria-hidden="true" animate={{ opacity: view === item.id ? 1 : 0.8, scale: view === item.id ? 1 : 0.94 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.18 }}><Icon size={21} weight={view === item.id ? 'fill' : 'bold'} aria-hidden="true" /></m.i><span>{c.nav[item.id]}</span></button>;
         })}
       </nav>
 
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{storageLabel}</span>
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{`${c.nav[view]}. ${c.header.context[view]}`}</span>
 
-      <AnimatePresence initial={false} onExitComplete={restoreDialogFocus}>{activeDialog}</AnimatePresence>
+      <AnimatePresence initial={false} mode="wait" onExitComplete={restoreDialogFocus}>{activeDialog}</AnimatePresence>
 
       <AnimatePresence initial={false} mode="wait">
         {toast && (
@@ -824,7 +898,9 @@ function AppContent() {
   );
 }
 
-function Overview({ summary, transactions, subscriptions, subscriptionTotals, customCategories, today, onNavigate, onAddTransaction }: {
+function Overview({ data, onAccounts, summary, transactions, subscriptions, subscriptionTotals, today, onNavigate, onAddTransaction }: {
+  data: FinanceData;
+  onAccounts: (accountId?: string) => void;
   summary: ReturnType<typeof deriveFinanceSummary>;
   transactions: Transaction[];
   subscriptions: Subscription[];
@@ -834,7 +910,8 @@ function Overview({ summary, transactions, subscriptions, subscriptionTotals, cu
   onNavigate: (view: View) => void;
   onAddTransaction: () => void;
 }) {
-  const { c, formatCurrency, formatPercent, t } = useI18n();
+  const { c, locale, formatCurrency, formatPercent, formatDate, t } = useI18n();
+  const vi = locale === 'vi';
   const [period, setPeriod] = useState<CashflowPeriod>('30d');
   const upcoming = [...subscriptions].sort((a, b) => a.nextRenewal.localeCompare(b.nextRenewal)).slice(0, 3);
   const balanceLabel = formatCurrency(summary.availableBalance);
@@ -844,19 +921,24 @@ function Overview({ summary, transactions, subscriptions, subscriptionTotals, cu
     <div className="overview-layout">
       <div className="overview-primary">
         <section className="balance-surface surface-raised" aria-labelledby="balance-title">
-          <div className="balance-topline"><span id="balance-title">{c.overview.availableBalance}</span><Wallet size={21} weight="regular" aria-hidden="true" /></div>
+          <div className="balance-topline"><span id="balance-title">{vi ? 'Tiền đang có' : 'Money on hand'}</span><button type="button" className="icon-plain" onClick={() => onAccounts()} aria-label={vi ? 'Quản lý nguồn tiền' : 'Manage accounts'}><Wallet size={21} weight="bold" aria-hidden="true" /></button></div>
           <strong className={`balance-value ${moneyDensityClass(balanceLabel)}`.trim()} title={balanceLabel}>{balanceLabel}</strong>
+          {data.accounts.some((account) => account.kind === 'credit_card') && <div className="financial-position"><div><small>{vi ? 'Dư nợ thẻ' : 'Card debt'}</small><strong>{formatCurrency(summary.cardDebt)}</strong>{summary.cardCredit > 0 && <small>{vi ? 'Số dư có trên thẻ: ' : 'Credit held on cards: '}{formatCurrency(summary.cardCredit)}</small>}</div><div><small>{vi ? 'Tài sản ròng đang theo dõi' : 'Tracked net worth'}</small><strong>{formatCurrency(summary.netWorth)}</strong></div></div>}
+          {summary.valuationDate && <small className="valuation-note">{vi ? 'Ước tính bằng VND · tỷ giá từ ' : 'Estimated in VND · rates from '}{formatDate(summary.valuationDate)}</small>}
+          {summary.missingCurrencies.length > 0 && <small className="valuation-note is-warning">{vi ? 'Tổng chưa bao gồm ' : 'Totals do not yet include '}{summary.missingCurrencies.join(', ')}. <button type="button" className="quiet-link" onClick={() => onAccounts()}>{vi ? 'Bổ sung tỷ giá' : 'Add exchange rates'}</button></small>}
           <div className="summary-pair">
             <div className="summary-metric"><span className="metric-icon positive"><ArrowUpRight size={18} weight="bold" aria-hidden="true" /></span><span><small>{c.overview.incomeThisMonth}</small><strong className={moneyDensityClass(incomeLabel)} title={incomeLabel}>{incomeLabel}</strong><em className="positive-copy">{c.overview.recordedThisMonth}</em></span></div>
             <div className="summary-divider" aria-hidden="true" />
             <div className="summary-metric"><span className="metric-icon negative"><ArrowDownRight size={18} weight="bold" aria-hidden="true" /></span><span><small>{c.overview.spendingThisMonth}</small><strong className={moneyDensityClass(expenseLabel)} title={expenseLabel}>{expenseLabel}</strong><em className="negative-copy">{t('overview.incomeShare', { percent: formatPercent(summary.incomeThisMonth > 0 ? summary.expenseThisMonth / summary.incomeThisMonth : 0) })}</em></span></div>
           </div>
+          {summary.unconvertedTransactionCount > 0 && <small className="valuation-note is-warning">{vi ? `${summary.unconvertedTransactionCount} giao dịch tháng này chưa quy đổi, chưa tính vào thu/chi.` : `${summary.unconvertedTransactionCount} transactions this month are not converted and are excluded from income/spending.`}</small>}
         </section>
+        <AccountsOverview data={data} onOpen={onAccounts} />
         <RenewalSchedule subscriptions={upcoming} today={today} onOpen={() => onNavigate('subscriptions')} className="mobile-renewal-schedule surface-raised" />
-        <CashflowPanel transactions={transactions} today={today} period={period} onPeriodChange={setPeriod} />
+        <CashflowPanel data={data} transactions={transactions} today={today} period={period} onPeriodChange={setPeriod} />
         <section className="activity-panel surface-raised">
           <div className="section-heading"><h2>{c.overview.recentTransactions}</h2><button type="button" className="quiet-link" onClick={() => onNavigate('transactions')}>{c.overview.viewAll} <CaretRight size={14} weight="bold" aria-hidden="true" /></button></div>
-          <TransactionList transactions={transactions.slice(0, 3)} customCategories={customCategories} compact />
+          <TransactionList data={data} transactions={transactions.slice(0, 3)} compact />
           <button className="mobile-inline-action" type="button" onClick={onAddTransaction}><Plus size={18} weight="bold" aria-hidden="true" /> {c.actions.addTransaction}</button>
         </section>
       </div>
@@ -920,15 +1002,19 @@ function RenewalSchedule({ subscriptions, today, onOpen, className = '' }: { sub
   );
 }
 
-function CashflowPanel({ transactions, today, period, onPeriodChange }: { transactions: Transaction[]; today: string; period: CashflowPeriod; onPeriodChange: (period: CashflowPeriod) => void }) {
-  const { c, formatCompactNumber, formatCurrency, localeTag, t } = useI18n();
+function CashflowPanel({ data, transactions, today, period, onPeriodChange }: { data: FinanceData; transactions: Transaction[]; today: string; period: CashflowPeriod; onPeriodChange: (period: CashflowPeriod) => void }) {
+  const { c, locale, formatCompactNumber, formatCurrency, localeTag } = useI18n();
+  const vi = locale === 'vi';
+  const [mode, setMode] = useState<'spending' | 'liquid'>('spending');
   const options: Array<{ id: CashflowPeriod; label: string }> = [
     { id: '7d', label: c.cashflow.period.sevenDays },
     { id: '30d', label: c.cashflow.period.thirtyDays },
     { id: '6m', label: c.cashflow.period.sixMonths },
     { id: '1y', label: c.cashflow.period.oneYear },
   ];
-  const points = deriveCashflowSeries(transactions, period, dateReference(today));
+  const points = mode === 'spending' ? deriveCashflowSeries(transactions, period, dateReference(today)) : deriveLiquiditySeries(data, period, dateReference(today));
+  const missing = points.reduce((sum, point) => sum + point.unconvertedTransactionCount, 0);
+  const chartTitle = mode === 'spending' ? (vi ? 'Thu nhập và chi tiêu' : 'Income and spending') : (vi ? 'Biến động tiền đang có' : 'Money on hand movement');
   const values = points.map((point) => point.net);
   const maxMagnitude = Math.max(...values.map((point) => Math.abs(point)), 1);
   const scale = Math.ceil(maxMagnitude / 1_000_000) * 1_000_000;
@@ -939,14 +1025,23 @@ function CashflowPanel({ transactions, today, period, onPeriodChange }: { transa
     return new Intl.DateTimeFormat(localeTag, options).format(new Date(`${point.startDate}T12:00:00`));
   });
   const net = values.reduce((sum, value) => sum + value, 0);
+  if (transactions.length === 0) return (
+    <section className="cashflow-panel surface-raised">
+      <div className="section-heading"><h2>{vi ? 'Thu nhập và chi tiêu' : 'Income and spending'}</h2></div>
+      <div className="cashflow-empty"><TrendUp size={30} weight="bold" aria-hidden="true" /><strong>{vi ? 'Dòng tiền bắt đầu từ giao dịch của bạn' : 'Your cash flow starts with a transaction'}</strong><p>{vi ? 'Ghi khoản thu hoặc chi đầu tiên để xem tiền thay đổi theo thời gian.' : 'Record your first income or expense to see how your money changes over time.'}</p></div>
+    </section>
+  );
   return (
     <section className="cashflow-panel surface-raised">
       <div className="section-heading cashflow-heading">
-        <div><h2>{c.cashflow.title}</h2><span className={`cashflow-net ${net >= 0 ? 'is-positive' : 'is-negative'}`}>{net >= 0 ? '+' : ''}{formatCurrency(net)}</span></div>
+        <div><h2>{chartTitle}</h2><span className={`cashflow-net ${net >= 0 ? 'is-positive' : 'is-negative'}`}>{net >= 0 ? '+' : ''}{formatCurrency(net)}</span></div>
         <div className="segmented-control" role="group" aria-label={c.cashflow.rangeAria}>{options.map((option) => <button key={option.id} type="button" className={period === option.id ? 'is-active' : ''} onClick={() => onPeriodChange(option.id)} aria-pressed={period === option.id}>{option.label}</button>)}</div>
       </div>
+      <div className="cashflow-mode" role="group" aria-label={vi ? 'Nội dung biểu đồ' : 'Chart measure'}><button type="button" aria-pressed={mode === 'spending'} onClick={() => setMode('spending')}>{vi ? 'Thu / Chi' : 'Income / Spending'}</button><button type="button" aria-pressed={mode === 'liquid'} onClick={() => setMode('liquid')}>{vi ? 'Tiền đang có' : 'Money on hand'}</button></div>
+      <p className="field-help">{mode === 'spending' ? (vi ? 'Mua bằng thẻ tính vào chi tiêu; chuyển tiền và trả nợ thẻ không tính lần nữa.' : 'Card purchases count as spending. Transfers and card repayments do not count again.') : (vi ? 'Gồm tiền trả nợ thẻ và điều chỉnh đối chiếu. Chuyển giữa nguồn tiền của bạn được bù trừ; số dư ban đầu và thiết lập nguồn không tính vào biểu đồ.' : 'Includes card repayments and reconciliation adjustments. Transfers between cash accounts cancel out; opening balances and account setup are excluded.')}</p>
+      {missing > 0 && <p className="valuation-note is-warning">{vi ? `${missing} khoản chưa quy đổi; biểu đồ chưa đầy đủ.` : `${missing} unconverted entries; this chart is incomplete.`}</p>}
       <div className="chart-scale" aria-hidden="true"><span>{formatCompactNumber(scale)}</span><span>0</span><span>-{formatCompactNumber(scale)}</span></div>
-      <div className="cashflow-chart" style={{ gridTemplateColumns: `repeat(${points.length}, minmax(3px, 1fr))` }} role="img" aria-label={t('cashflow.chartAria', { net: formatCurrency(net) })}>
+      <div className="cashflow-chart" style={{ gridTemplateColumns: `repeat(${points.length}, minmax(3px, 1fr))` }} role="img" aria-label={`${chartTitle}: ${formatCurrency(net)}`}>
         <span className="zero-line" aria-hidden="true" />
         {values.map((point, index) => <span className="chart-column" key={points[index].key}><i className={point >= 0 ? 'bar-positive' : 'bar-negative'} style={{ height: `${point === 0 ? 2 : Math.max(8, Math.round((Math.abs(point) / maxMagnitude) * 68))}px` }} /></span>)}
       </div>
@@ -982,55 +1077,8 @@ function SubscriptionOverview({ subscriptions, totals, today, onOpen }: { subscr
   );
 }
 
-function TransactionList({ transactions, customCategories, compact = false, onDelete, onEdit }: { transactions: Transaction[]; customCategories: CustomExpenseCategory[]; compact?: boolean; onDelete?: (id: string) => void; onEdit?: (item: Transaction) => void }) {
-  const { c, formatCurrency, formatDate, t } = useI18n();
-  if (transactions.length === 0) return <div className="empty-state"><Receipt size={28} weight="duotone" aria-hidden="true" /><strong>{c.transactions.emptyTitle}</strong><span>{c.transactions.emptyBody}</span></div>;
-  return (
-    <div className={`transaction-list ${compact ? 'is-compact' : ''}`}>
-      {transactions.map((transaction) => {
-        const title = transaction.titleKey ? c.demo.transactions[transaction.titleKey] : transaction.title;
-        const categoryLabel = transaction.category === 'income' ? c.categories.income : expenseCategoryLabel(c, transaction.category, customCategories);
-        const amountLabel = `${transaction.amount > 0 ? '+' : ''}${formatCurrency(transaction.amount)}`;
-        return (
-          <article className="transaction-row" key={transaction.id}>
-            <span className={`transaction-icon ${transaction.amount > 0 ? 'is-income' : ''}`}>{transaction.category === 'income' ? <Wallet size={19} weight="fill" aria-hidden="true" /> : <CategoryIcon icon={expenseCategoryIcon(transaction.category, customCategories)} size={19} weight="fill" aria-hidden="true" />}</span>
-            <span className="transaction-copy"><strong>{title}</strong><small>{categoryLabel}</small></span>
-            <time dateTime={transaction.date}>{formatDate(transaction.date)}</time>
-            <strong className={`transaction-amount ${transaction.amount > 0 ? 'is-positive' : ''} ${moneyDensityClass(amountLabel)}`.trim()} title={amountLabel}>{amountLabel}</strong>
-            {(onDelete || onEdit) && <div className="row-actions">{onEdit && <button className="row-action" type="button" onClick={() => onEdit(transaction)} aria-label={t('transactions.editAria', { title })}><PencilSimple size={18} weight="bold" aria-hidden="true" /></button>}{onDelete && <button className="row-action" type="button" onClick={() => onDelete(transaction.id)} aria-label={t('transactions.deleteAria', { title })}><Trash size={18} weight="bold" aria-hidden="true" /></button>}</div>}
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function TransactionsView({ transactions, customCategories, onDelete, onEdit, onAdd }: { transactions: Transaction[]; customCategories: CustomExpenseCategory[]; onDelete: (id: string) => void; onEdit: (item: Transaction) => void; onAdd: () => void }) {
-  const { c } = useI18n();
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
-  const filtered = transactions.filter((item) => {
-    const title = item.titleKey ? c.demo.transactions[item.titleKey] : item.title;
-    const categoryLabel = item.category === 'income' ? c.categories.income : expenseCategoryLabel(c, item.category, customCategories);
-    const haystack = `${title} ${categoryLabel}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLocaleLowerCase();
-    const needle = query.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLocaleLowerCase();
-    const matchesQuery = haystack.includes(needle);
-    return matchesQuery && (filter === 'all' || (filter === 'income' ? item.amount > 0 : item.amount < 0));
-  });
-  return (
-    <section className="full-view surface-raised">
-      <div className="view-toolbar">
-        <label className="search-field"><span className="sr-only">{c.transactions.search}</span><MagnifyingGlass size={19} weight="regular" aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={c.transactions.search} /></label>
-        <div className="filter-group" role="group" aria-label={c.transactions.filterAria}>{(['all', 'income', 'expense'] as const).map((item) => <button type="button" key={item} className={filter === item ? 'is-active' : ''} onClick={() => setFilter(item)} aria-pressed={filter === item}>{c.transactions.filter[item]}</button>)}</div>
-        <button className="secondary-action" type="button" onClick={onAdd}><Plus size={18} weight="bold" aria-hidden="true" /> {c.actions.add}</button>
-      </div>
-      <TransactionList transactions={filtered} customCategories={customCategories} onDelete={onDelete} onEdit={onEdit} />
-      {filtered.length === 0 && transactions.length > 0 && <div className="filter-empty"><MagnifyingGlass size={26} weight="duotone" aria-hidden="true" /><strong>{c.transactions.noResultsTitle}</strong><span>{c.transactions.noResultsBody}</span></div>}
-    </section>
-  );
-}
-
-function SubscriptionsView({ subscriptions, totals, today, onAdd, onEdit, onToggle, onDelete, onRecordPayment }: {
+function SubscriptionsView({ accounts, subscriptions, totals, today, onAdd, onEdit, onToggle, onDelete, onRecordPayment }: {
+  accounts: Account[];
   subscriptions: Subscription[];
   totals: ReturnType<typeof deriveSubscriptionTotals>;
   today: string;
@@ -1062,12 +1110,12 @@ function SubscriptionsView({ subscriptions, totals, today, onAdd, onEdit, onTogg
             return (
               <article className={`subscription-management-row ${item.status === 'paused' ? 'is-paused' : ''}`} key={item.id}>
                 <ServiceIcon serviceId={item.serviceId} name={item.name} monogram={item.monogram} tone={item.tone} large />
-                <span className="subscription-main"><strong>{item.name}</strong>{planLabel && <small>{planLabel}</small>}</span>
+                <span className="subscription-main"><strong>{item.name}</strong>{planLabel && <small>{planLabel}</small>}<span className="subscription-account-label">{(() => { const account = accounts.find((candidate) => candidate.id === item.accountId); return account ? accountDisplayName(account, locale) : undefined; })() ?? (locale === 'vi' ? 'Chọn nguồn khi thanh toán' : 'Choose account when paying')}</span></span>
                 <span className={`status-label status-${item.status}`}>{c.subscriptions.status[item.status]}</span>
                 <span className={`subscription-date ${relativeDays < 0 ? 'is-overdue' : ''}`}><strong>{formatDate(item.nextRenewal)}</strong><small>{renewalLabel(item.nextRenewal, today, c, plural)}</small></span>
                 <span className="subscription-price"><strong className={moneyDensityClass(amountLabel)} title={amountLabel}>{amountLabel}</strong><small>{item.cycle === 'year' ? c.subscriptions.cycle.perYear : c.subscriptions.cycle.perMonth}</small></span>
                 <div className="management-actions">
-                  <button type="button" disabled={item.status === 'paused' || item.currency !== 'VND'} onClick={() => onRecordPayment(item.id)} aria-label={t('subscriptions.recordPaymentAria', { name: item.name })} title={item.currency === 'VND' ? c.subscriptions.recordPayment : c.subscriptions.recordPaymentVndOnly}><CheckCircle size={18} weight="bold" aria-hidden="true" /></button>
+                  <button type="button" disabled={item.status === 'paused'} onClick={() => onRecordPayment(item.id)} aria-label={t('subscriptions.recordPaymentAria', { name: item.name })} title={c.subscriptions.recordPayment}><CheckCircle size={18} weight="bold" aria-hidden="true" /></button>
                   <button type="button" onClick={() => onEdit(item)} aria-label={t('subscriptions.editAria', { name: item.name })} title={c.common.edit}><PencilSimple size={18} weight="bold" aria-hidden="true" /></button>
                   <button type="button" onClick={() => onToggle(item.id)} aria-label={t(item.status === 'paused' ? 'subscriptions.resumeAria' : 'subscriptions.pauseAria', { name: item.name })}>{item.status === 'paused' ? <Play size={18} weight="bold" aria-hidden="true" /> : <Pause size={18} weight="bold" aria-hidden="true" />}</button>
                   <button type="button" onClick={() => onDelete(item.id)} aria-label={t('subscriptions.deleteAria', { name: item.name })} title={c.common.delete}><Trash size={18} weight="bold" aria-hidden="true" /></button>
@@ -1083,7 +1131,7 @@ function SubscriptionsView({ subscriptions, totals, today, onAdd, onEdit, onTogg
 }
 
 function BudgetsView({ usage, customCategories, today, onAdd, onEdit, onDelete }: { usage: ReturnType<typeof deriveBudgetUsage>; customCategories: CustomExpenseCategory[]; today: string; onAdd: () => void; onEdit: (item: Budget) => void; onDelete: (id: string) => void }) {
-  const { c, formatCurrency, formatMonthYear, formatPercent, t } = useI18n();
+  const { c, locale, formatCurrency, formatMonthYear, formatPercent, t } = useI18n();
   const total = usage.reduce((sum, item) => sum + item.limit, 0);
   const used = usage.reduce((sum, item) => sum + item.spent, 0);
   const month = formatMonthYear(today);
@@ -1104,11 +1152,11 @@ function BudgetsView({ usage, customCategories, today, onAdd, onEdit, onDelete }
             const amount = formatCurrency(Math.abs(budget.limit - budget.spent));
             return (
               <article className="budget-row" key={budget.id}>
-                <span className={`budget-icon ${over ? 'is-over' : warning ? 'is-warning' : ''}`}><CategoryIcon icon={expenseCategoryIcon(budget.category, customCategories)} size={20} weight="regular" aria-hidden="true" /></span>
-                <span className="budget-copy"><strong>{expenseCategoryLabel(c, budget.category, customCategories)}</strong><small>{formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}</small></span>
+                <span className={`budget-icon ${over ? 'is-over' : warning ? 'is-warning' : ''}`}><CategoryIcon icon={expenseCategoryIcon(budget.category, customCategories)} size={20} weight="fill" aria-hidden="true" /></span>
+                <span className="budget-copy"><strong>{expenseCategoryLabel(c, budget.category, customCategories)}</strong><small>{formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}</small>{budget.unconvertedTransactionCount > 0 && <small className="valuation-note is-warning">{locale === 'vi' ? `${budget.unconvertedTransactionCount} khoản chưa quy đổi; chi tiêu chưa đầy đủ.` : `${budget.unconvertedTransactionCount} unconverted entries; spending is incomplete.`}</small>}</span>
                 <span className={`budget-status ${over ? 'is-over' : warning ? 'is-warning' : ''}`}>{t(over ? 'budgets.overBy' : 'budgets.remaining', { amount })}</span>
                 <span className="budget-percentage">{formatPercent(ratio)}</span>
-                <span className="budget-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(percent, 100)} aria-label={t('budgets.usedAria', { percent: formatPercent(ratio) })}><i className={over ? 'is-over' : warning ? 'is-warning' : ''} style={{ width: `${Math.min(percent, 100)}%` }} /></span>
+                <span className="budget-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(percent, 100))} aria-label={t('budgets.usedAria', { percent: formatPercent(ratio) })}><i className={over ? 'is-over' : warning ? 'is-warning' : ''} style={{ width: `${Math.max(0, Math.min(percent, 100))}%` }} /></span>
                 <div className="budget-actions"><button type="button" onClick={() => onEdit(budget)} aria-label={t('budgets.editAria', { category: expenseCategoryLabel(c, budget.category, customCategories) })}><PencilSimple size={18} weight="bold" aria-hidden="true" /></button><button type="button" onClick={() => onDelete(budget.id)} aria-label={t('budgets.deleteAria', { category: expenseCategoryLabel(c, budget.category, customCategories) })}><Trash size={18} weight="bold" aria-hidden="true" /></button></div>
               </article>
             );
@@ -1120,107 +1168,9 @@ function BudgetsView({ usage, customCategories, today, onAdd, onEdit, onDelete }
   );
 }
 
-function useDialogFocusTrap() {
-  const dialogRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const trapFocus = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return;
-      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((element) => element.offsetParent !== null);
-      const first = focusable[0];
-      const last = focusable.at(-1);
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    dialog.addEventListener('keydown', trapFocus);
-    return () => dialog.removeEventListener('keydown', trapFocus);
-  }, []);
-  return dialogRef;
-}
+function isSafeAmount(value: number) { return Number.isSafeInteger(value) && value > 0; }
 
-function focusFirstInvalid(form: HTMLFormElement | null) {
-  window.requestAnimationFrame(() => form?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
-}
-
-function isSafeAmount(value: number) {
-  return Number.isSafeInteger(value) && value > 0;
-}
-
-function SheetFrame({ title, subtitle, labelledBy, onClose, children, className = '' }: { title: string; subtitle: string; labelledBy: string; onClose: () => void; children: ReactNode; className?: string }) {
-  const { c } = useI18n();
-  const shouldReduceMotion = useReducedMotion();
-  const dialogRef = useDialogFocusTrap();
-  const closeRef = useRef(onClose);
-  useEffect(() => {
-    closeRef.current = onClose;
-  }, [onClose]);
-  useEffect(() => {
-    document.body.classList.add('is-sheet-open');
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeRef.current();
-    };
-    const frame = window.requestAnimationFrame(() => {
-      const dialog = dialogRef.current;
-      if (dialog && !dialog.contains(document.activeElement)) dialog.focus();
-    });
-    window.addEventListener('keydown', closeOnEscape);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      document.body.classList.remove('is-sheet-open');
-      window.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [dialogRef]);
-  return (
-    <m.div className="sheet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.16, ease: [0.2, 0, 0.38, 0.9] }}>
-      <m.section ref={dialogRef} className={`form-sheet ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1} initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 18, scale: shouldReduceMotion ? 1 : 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 12, scale: shouldReduceMotion ? 1 : 0.99 }} transition={{ duration: shouldReduceMotion ? 0.08 : 0.26, ease: [0.16, 1, 0.3, 1] }}>
-        <header className="sheet-header"><div><h2 id={labelledBy}>{title}</h2><p>{subtitle}</p></div><button type="button" onClick={onClose} aria-label={c.common.close}><X size={21} weight="bold" aria-hidden="true" /></button></header>
-        {children}
-      </m.section>
-    </m.div>
-  );
-}
-
-function TransactionSheet({ initial, today, customCategories, onClose, onSave }: { initial?: Transaction; today: string; customCategories: CustomExpenseCategory[]; onClose: () => void; onSave: (input: TransactionInput, existing?: Transaction) => void }) {
-  const { c, currencySymbol } = useI18n();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [type, setType] = useState<TransactionType>(initial?.amount && initial.amount > 0 ? 'income' : 'expense');
-  const [title, setTitle] = useState(initial?.titleKey ? c.demo.transactions[initial.titleKey] : initial?.title ?? '');
-  const [amount, setAmount] = useState(initial ? String(Math.abs(initial.amount)) : '');
-  const [category, setCategory] = useState<ExpenseCategoryId>(initial?.category === 'income' ? 'dining' : initial?.category ?? 'dining');
-  const [pendingCustomCategory, setPendingCustomCategory] = useState<CustomExpenseCategory | undefined>();
-  const [date, setDate] = useState(initial?.date ?? today);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    const numericAmount = Number(amount);
-    const nextErrors: Record<string, string> = {};
-    if (!title.trim()) nextErrors.title = c.validation.transactionName;
-    if (!numericAmount || numericAmount <= 0) nextErrors.amount = c.validation.positiveAmount;
-    else if (!isSafeAmount(numericAmount)) nextErrors.amount = c.validation.unsafeAmount;
-    if (!date) nextErrors.date = c.validation.transactionDate;
-    else if (date > today) nextErrors.date = c.validation.transactionFuture;
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) { focusFirstInvalid(formRef.current); return; }
-    onSave({ title: title.trim(), amount: numericAmount, category, date, type, customCategory: type === 'expense' ? pendingCustomCategory : undefined }, initial);
-    onClose();
-  }
-  return (
-    <SheetFrame title={initial ? c.transactionForm.editTitle : c.transactionForm.title} subtitle={initial ? c.transactionForm.editSubtitle : c.transactionForm.subtitle} labelledBy="transaction-sheet-title" onClose={onClose}>
-      <form ref={formRef} onSubmit={submit} noValidate>
-        <div className="type-switch" role="group" aria-label={c.transactionForm.typeAria}><button type="button" className={type === 'expense' ? 'is-active' : ''} onClick={() => setType('expense')} aria-pressed={type === 'expense'}>{c.transactionForm.type.expense}</button><button type="button" className={type === 'income' ? 'is-active' : ''} onClick={() => setType('income')} aria-pressed={type === 'income'}>{c.transactionForm.type.income}</button></div>
-        <label className="field"><span>{c.transactionForm.name}</span><input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder={c.transactionForm.namePlaceholder} aria-invalid={Boolean(errors.title)} aria-describedby={errors.title ? 'transaction-title-error' : undefined} />{errors.title && <small id="transaction-title-error" className="field-error" role="alert">{errors.title}</small>}</label>
-        <label className="field"><span>{c.transactionForm.amount}</span><div className="money-input"><input inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value.replace(/\D/g, ''))} placeholder="0" aria-invalid={Boolean(errors.amount)} aria-describedby={errors.amount ? 'transaction-amount-error' : undefined} /><strong>{currencySymbol}</strong></div>{errors.amount && <small id="transaction-amount-error" className="field-error" role="alert">{errors.amount}</small>}</label>
-        {type === 'expense' && <CategoryPicker label={c.transactionForm.category} value={category} customCategories={pendingCustomCategory ? [...customCategories, pendingCustomCategory] : customCategories} onChange={(nextCategory, created) => { setCategory(nextCategory); setPendingCustomCategory((current) => created ?? (current?.id === nextCategory ? current : undefined)); }} />}
-        <label className="field"><span>{c.transactionForm.date}</span><input type="date" max={today} value={date} onChange={(event) => setDate(event.target.value)} aria-invalid={Boolean(errors.date)} aria-describedby={errors.date ? 'transaction-date-error' : undefined} />{errors.date && <small id="transaction-date-error" className="field-error" role="alert">{errors.date}</small>}</label>
-        <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{initial ? c.transactionForm.update : c.transactionForm.save}</button></div>
-      </form>
-    </SheetFrame>
-  );
-}
-
-function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subscription; today: string; onClose: () => void; onSave: (input: SubscriptionInput, existing?: Subscription) => void }) {
+function SubscriptionSheet({ initial, accounts, today, onClose, onSave }: { initial?: Subscription; accounts: Account[]; today: string; onClose: () => void; onSave: (input: SubscriptionInput, existing?: Subscription) => Promise<unknown> }) {
   const { c, formatDate, locale, localeTag, t } = useI18n();
   const formRef = useRef<HTMLFormElement>(null);
   const inferredService = findCatalogServiceById(initial?.serviceId) ?? (initial ? findCatalogServiceByName(initial.name) : undefined);
@@ -1243,6 +1193,8 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
   const [currency, setCurrency] = useState<SubscriptionCurrency>(initial?.currency ?? 'VND');
   const [cycle, setCycle] = useState<BillingCycle>(initial?.cycle ?? 'month');
   const [nextRenewal, setNextRenewal] = useState(initial?.nextRenewal ?? addDaysDateOnly(today, 7));
+  const [accountId, setAccountId] = useState(initial?.accountId ?? '');
+  const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const selectedService = findCatalogServiceById(serviceChoice);
   const selectedPlan = findCatalogPlan(serviceChoice, planChoice);
@@ -1293,8 +1245,9 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
     setAmount('');
   }
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
+    if (busy) return;
     const catalogSelection = selectedService && selectedPlan && !usesManualPrice ? selectedPlan : undefined;
     const finalName = selectedService?.name ?? name.trim();
     const finalPlan = catalogSelection?.label ?? selectedPlan?.label ?? plan.trim();
@@ -1311,7 +1264,10 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
     else if (!initial && nextRenewal < today) nextErrors.nextRenewal = c.validation.renewalPast;
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) { focusFirstInvalid(formRef.current); return; }
-    onSave({
+    setBusy(true);
+    try {
+    await onSave({
+      accountId: accountId || undefined,
       serviceId: selectedService?.id,
       planId: selectedPlan?.id,
       name: finalName,
@@ -1322,6 +1278,8 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
       nextRenewal,
     }, initial);
     onClose();
+    } catch (error) { setErrors({ form: financeError(error, locale) }); }
+    finally { setBusy(false); }
   }
 
   const displayedPrice = selectedPlan
@@ -1331,8 +1289,9 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
   const selectedServiceName = selectedService?.name ?? name;
 
   return (
-    <SheetFrame title={initial ? c.subscriptionForm.editTitle : c.subscriptionForm.title} subtitle={initial ? c.subscriptionForm.editSubtitle : c.subscriptionForm.subtitle} labelledBy="subscription-sheet-title" onClose={onClose}>
+    <SheetFrame title={initial ? c.subscriptionForm.editTitle : c.subscriptionForm.title} subtitle={initial ? c.subscriptionForm.editSubtitle : c.subscriptionForm.subtitle} labelledBy="subscription-sheet-title" onClose={onClose} busy={busy}>
       <form ref={formRef} onSubmit={submit} noValidate>
+        <fieldset className="ledger-fields" disabled={busy}>
         <label className="field">
           <span>{c.subscriptionForm.serviceName}</span>
           <div className="catalog-select-shell">
@@ -1387,23 +1346,28 @@ function SubscriptionSheet({ initial, today, onClose, onSave }: { initial?: Subs
         )}
 
         <label className="field"><span>{c.subscriptionForm.renewalDate}</span><input type="date" min={initial ? undefined : today} value={nextRenewal} onChange={(event) => setNextRenewal(event.target.value)} aria-invalid={Boolean(errors.nextRenewal)} aria-describedby={errors.nextRenewal ? 'subscription-renewal-error' : undefined} />{errors.nextRenewal && <small id="subscription-renewal-error" className="field-error" role="alert">{errors.nextRenewal}</small>}</label>
-        <div className="info-callout"><CalendarBlank size={20} weight="regular" aria-hidden="true" /><span>{t('subscriptionForm.callout', { appName: APP_NAME })}</span></div>
+<label className="field"><span>{locale === 'vi' ? 'Nguồn thanh toán mặc định' : 'Default payment account'}</span><select value={accountId} onChange={(event) => setAccountId(event.target.value)}><option value="">{locale === 'vi' ? 'Chọn khi ghi nhận thanh toán' : 'Choose when recording payment'}</option>{accounts.filter((account) => (!account.archived && account.kind !== 'legacy') || account.id === initial?.accountId).map((account) => <option key={account.id} value={account.id} disabled={account.archived}>{accountDisplayName(account, locale)} · {account.currency}</option>)}</select><small className="field-help">{locale === 'vi' ? 'Đổi nguồn chỉ áp dụng cho các lần thanh toán sau.' : 'Changing this only affects future payments.'}</small></label>
+        {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
+        <div className="info-callout"><CalendarBlank size={20} weight="bold" aria-hidden="true" /><span>{t('subscriptionForm.callout', { appName: APP_NAME })}</span></div>
         <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{initial ? c.subscriptionForm.update : c.subscriptionForm.save}</button></div>
+        </fieldset>
       </form>
     </SheetFrame>
   );
 }
 
-function BudgetSheet({ initial, budgets, customCategories, onClose, onSave }: { initial?: Budget; budgets: Budget[]; customCategories: CustomExpenseCategory[]; onClose: () => void; onSave: (input: BudgetInput, existing?: Budget) => void }) {
-  const { c, currencySymbol } = useI18n();
+function BudgetSheet({ initial, budgets, customCategories, onClose, onSave }: { initial?: Budget; budgets: Budget[]; customCategories: CustomExpenseCategory[]; onClose: () => void; onSave: (input: BudgetInput, existing?: Budget) => Promise<unknown> }) {
+  const { c, currencySymbol, locale } = useI18n();
   const formRef = useRef<HTMLFormElement>(null);
   const firstAvailable = EXPENSE_CATEGORY_DEFINITIONS.find((category) => category.id !== 'other' && !budgets.some((item) => item.category === category.id))?.id ?? 'dining';
   const [category, setCategory] = useState<ExpenseCategoryId>(initial?.category ?? firstAvailable);
   const [pendingCustomCategory, setPendingCustomCategory] = useState<CustomExpenseCategory | undefined>();
   const [limit, setLimit] = useState(initial ? String(initial.limit) : '');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  function submit(event: FormEvent) {
+  const [busy, setBusy] = useState(false);
+  async function submit(event: FormEvent) {
     event.preventDefault();
+    if (busy) return;
     const numericLimit = Number(limit);
     const nextErrors: Record<string, string> = {};
     if (!category) nextErrors.category = c.validation.budgetCategory;
@@ -1412,34 +1376,40 @@ function BudgetSheet({ initial, budgets, customCategories, onClose, onSave }: { 
     else if (!isSafeAmount(numericLimit)) nextErrors.limit = c.validation.unsafeAmount;
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) { focusFirstInvalid(formRef.current); return; }
-    onSave({ category, limit: numericLimit, customCategory: pendingCustomCategory }, initial);
-    onClose();
+    setBusy(true);
+    try { await onSave({ category, limit: numericLimit, customCategory: pendingCustomCategory }, initial); onClose(); }
+    catch (error) { setErrors({ form: financeError(error, locale) }); }
+    finally { setBusy(false); }
   }
   return (
-    <SheetFrame title={initial ? c.budgetForm.editTitle : c.budgetForm.addTitle} subtitle={initial ? c.budgetForm.editSubtitle : c.budgetForm.addSubtitle} labelledBy="budget-sheet-title" onClose={onClose}>
+    <SheetFrame title={initial ? c.budgetForm.editTitle : c.budgetForm.addTitle} subtitle={initial ? c.budgetForm.editSubtitle : c.budgetForm.addSubtitle} labelledBy="budget-sheet-title" onClose={onClose} busy={busy}>
       <form ref={formRef} onSubmit={submit} noValidate>
+        <fieldset className="ledger-fields" disabled={busy}>
         <CategoryPicker autoFocus label={c.budgetForm.category} value={category} customCategories={pendingCustomCategory ? [...customCategories, pendingCustomCategory] : customCategories} onChange={(nextCategory, created) => { setCategory(nextCategory); setPendingCustomCategory((current) => created ?? (current?.id === nextCategory ? current : undefined)); }} error={errors.category} errorId="budget-category-error" />
         <label className="field"><span>{c.budgetForm.monthlyLimit}</span><div className="money-input"><input inputMode="numeric" value={limit} onChange={(event) => setLimit(event.target.value.replace(/\D/g, ''))} placeholder="0" aria-invalid={Boolean(errors.limit)} aria-describedby={errors.limit ? 'budget-limit-error' : undefined} /><strong>{currencySymbol}</strong></div>{errors.limit && <small id="budget-limit-error" className="field-error" role="alert">{errors.limit}</small>}</label>
+        {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
         <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{initial ? c.budgetForm.update : c.budgetForm.save}</button></div>
+        </fieldset>
       </form>
     </SheetFrame>
   );
 }
 
-function SettingsSheet({ data, storageStatus, onClose, onOpeningBalance, onRestoreSample, onClear, onImport, onNotify }: {
+function SettingsSheet({ data, storageStatus, onClose, onManageAccounts, importOnly = false, onClear, onImport, onNotify }: {
   data: FinanceData;
   storageStatus: StorageStatus;
   onClose: () => void;
-  onOpeningBalance: (value: number) => void;
-  onRestoreSample: () => void;
-  onClear: () => void;
-  onImport: (data: FinanceData) => void;
+  onManageAccounts: () => void;
+  importOnly?: boolean;
+  onClear: () => Promise<unknown>;
+  onImport: (data: FinanceData) => Promise<unknown>;
   onNotify: (message: string) => void;
 }) {
-  const { c, currencySymbol } = useI18n();
-  const [openingBalance, setOpeningBalance] = useState(String(data.openingBalance));
-  const [openingError, setOpeningError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<'restore' | 'clear' | null>(null);
+  const { c, locale } = useI18n();
+  const [error, setError] = useState('');
+  const [pendingImport, setPendingImport] = useState<FinanceData | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const confirmCancel = useRef<HTMLButtonElement>(null);
@@ -1452,12 +1422,12 @@ function SettingsSheet({ data, storageStatus, onClose, onOpeningBalance, onResto
     });
     return () => window.cancelAnimationFrame(frame);
   }, [confirming]);
-  function openConfirmation(kind: 'restore' | 'clear', trigger: HTMLButtonElement) {
+  function openConfirmation(trigger: HTMLButtonElement) {
     confirmTrigger.current = trigger;
-    setConfirming(kind);
+    setConfirming(true);
   }
   function cancelConfirmation() {
-    setConfirming(null);
+    setConfirming(false);
     const trigger = confirmTrigger.current;
     confirmTrigger.current = null;
     window.requestAnimationFrame(() => trigger?.isConnected && trigger.focus());
@@ -1465,13 +1435,6 @@ function SettingsSheet({ data, storageStatus, onClose, onOpeningBalance, onResto
   function dismissSettings() {
     if (confirming) cancelConfirmation();
     else onClose();
-  }
-  function saveOpeningBalance(event: FormEvent) {
-    event.preventDefault();
-    const value = Number(openingBalance);
-    if (!Number.isSafeInteger(value)) { setOpeningError(c.validation.unsafeAmount); return; }
-    setOpeningError(null);
-    onOpeningBalance(value);
   }
   function exportData() {
     const blob = new Blob([serializeFinanceData(data)], { type: 'application/json' });
@@ -1487,17 +1450,19 @@ function SettingsSheet({ data, storageStatus, onClose, onOpeningBalance, onResto
     if (isImporting) return;
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file || file.size > 2_000_000) { onNotify(c.toast.importInvalid); return; }
+    if (!file) return;
+    if (file.size > 2_000_000) { setError(c.toast.importInvalid); return; }
     setIsImporting(true);
     try {
       const parsed = parseFinanceData(await file.text());
-      if (parsed.status !== 'ok') { setIsImporting(false); onNotify(c.toast.importInvalid); return; }
+      if (parsed.status !== 'ok') { setIsImporting(false); setError(c.toast.importInvalid); return; }
+      if (parsed.data.mode === 'demo') { setIsImporting(false); setError(locale === 'vi' ? 'Đây là bản dữ liệu mẫu. Hãy chọn bản sao lưu dữ liệu cá nhân của bạn.' : 'This is a sample ledger. Choose a backup of your personal data.'); return; }
       setIsImporting(false);
-      onImport(parsed.data);
-      onClose();
+      setPendingImport(parsed.data);
+      setError('');
     } catch {
       setIsImporting(false);
-      onNotify(c.toast.importInvalid);
+      setError(c.toast.importInvalid);
     }
   }
   const statusCopy = storageStatus === 'loading'
@@ -1510,24 +1475,22 @@ function SettingsSheet({ data, storageStatus, onClose, onOpeningBalance, onResto
           ? c.storage.readOnly
           : c.storage.error;
   return (
-    <SheetFrame title={c.settings.title} subtitle={c.settings.subtitle} labelledBy="settings-sheet-title" onClose={dismissSettings} className="settings-sheet">
+    <SheetFrame title={importOnly ? c.settings.importData : c.settings.title} subtitle={importOnly ? (locale === 'vi' ? 'Tiếp tục từ bản sao lưu Tally trên thiết bị của bạn.' : 'Continue with a Tally backup from your device.') : c.settings.subtitle} labelledBy="settings-sheet-title" onClose={dismissSettings} className="settings-sheet" busy={busy || isImporting}>
       <div className="settings-content">
         <div className="privacy-callout"><ShieldCheck size={24} weight="duotone" aria-hidden="true" /><span><strong>{c.settings.localOnlyTitle}</strong><small>{c.settings.localOnlyBody}</small></span></div>
         <span className={`settings-storage-state is-${storageStatus}`}><i aria-hidden="true" />{statusCopy}</span>
-        <form className="settings-balance-form" onSubmit={saveOpeningBalance} noValidate>
-          <label className="field"><span>{c.settings.openingBalance}</span><small className="field-help">{c.settings.openingBalanceHelp}</small><div className="money-input"><input inputMode="numeric" value={openingBalance} onChange={(event) => setOpeningBalance(event.target.value.replace(/[^\d-]/g, '').replace(/(?!^)-/g, ''))} aria-invalid={Boolean(openingError)} aria-describedby={openingError ? 'opening-balance-error' : undefined} /><strong>{currencySymbol}</strong></div>{openingError && <small id="opening-balance-error" className="field-error" role="alert">{openingError}</small>}</label>
-          <button type="submit" className="secondary-action">{c.settings.saveOpeningBalance}</button>
-        </form>
+        {!importOnly && <button type="button" className="settings-row" onClick={onManageAccounts}><span><strong>{locale === 'vi' ? 'Nguồn tiền, số dư và tỷ giá' : 'Accounts, balances and exchange rates'}</strong><small>{locale === 'vi' ? 'Quản lý từng nguồn và đối chiếu số dư thực tế.' : 'Manage each account and reconcile its balance.'}</small></span><Wallet size={22} weight="bold" /></button>}
+        {error && <p className="field-error" role="alert">{error}</p>}
+        {pendingImport && <div className="inline-confirm" role="group" aria-label={locale === 'vi' ? 'Xác nhận nhập dữ liệu' : 'Confirm backup import'}><div><strong>{locale === 'vi' ? 'Thay dữ liệu hiện tại bằng bản sao lưu?' : 'Replace the current ledger with this backup?'}</strong><small>{pendingImport.accounts.length} {locale === 'vi' ? 'nguồn tiền' : 'accounts'} · {pendingImport.transactions.length} {locale === 'vi' ? 'giao dịch' : 'transactions'}</small></div><div><button type="button" className="cancel-action" disabled={busy} onClick={() => setPendingImport(null)}>{c.common.cancel}</button><button type="button" className="primary-action" disabled={busy} onClick={async () => { setBusy(true); try { await onImport(pendingImport); onClose(); } catch (failure) { setError(financeError(failure, locale)); } finally { setBusy(false); } }}>{c.settings.importData}</button></div></div>}
         <div className="settings-grid">
-          <button type="button" className="settings-card" onClick={exportData}><DownloadSimple size={22} weight="bold" aria-hidden="true" /><span><strong>{c.settings.exportData}</strong><small>{c.settings.exportDataBody}</small></span></button>
+          {!importOnly && <button type="button" className="settings-card" onClick={exportData}><DownloadSimple size={22} weight="bold" aria-hidden="true" /><span><strong>{c.settings.exportData}</strong><small>{c.settings.exportDataBody}</small></span></button>}
           <button type="button" className="settings-card" disabled={isImporting} aria-busy={isImporting} onClick={() => fileInput.current?.click()}>{isImporting ? <CircleNotch className="loading-spinner" size={22} weight="bold" aria-hidden="true" /> : <UploadSimple size={22} weight="bold" aria-hidden="true" />}<span><strong>{isImporting ? c.settings.importingData : c.settings.importData}</strong><small>{c.settings.importDataBody}</small></span></button>
           <input ref={fileInput} hidden type="file" accept="application/json,.json" disabled={isImporting} onChange={importData} aria-label={c.settings.importFileAria} />
         </div>
-        <div className="settings-danger-zone">
-          <button type="button" className="settings-row" onClick={(event) => openConfirmation('restore', event.currentTarget)}><span><strong>{c.settings.restoreSample}</strong><small>{c.settings.restoreSampleBody}</small></span><CaretRight size={18} weight="bold" aria-hidden="true" /></button>
-          <button type="button" className="settings-row is-danger" onClick={(event) => openConfirmation('clear', event.currentTarget)}><span><strong>{c.settings.clearAll}</strong><small>{c.settings.clearAllBody}</small></span><Trash size={19} weight="bold" aria-hidden="true" /></button>
-        </div>
-        {confirming && <div className="inline-confirm" role="group" aria-labelledby="confirm-action-title" aria-describedby="confirm-action-description"><WarningCircle size={23} weight="fill" aria-hidden="true" /><div><strong id="confirm-action-title">{confirming === 'clear' ? c.settings.confirmClearTitle : c.settings.restoreSample}</strong><small id="confirm-action-description">{confirming === 'clear' ? c.settings.confirmClearBody : c.settings.restoreSampleBody}</small></div><div><button ref={confirmCancel} type="button" className="cancel-action" onClick={cancelConfirmation}>{c.common.cancel}</button><button type="button" className="danger-action" onClick={() => { if (confirming === 'clear') onClear(); else onRestoreSample(); onClose(); }}>{confirming === 'clear' ? c.settings.confirmClearAction : c.settings.confirmRestoreAction}</button></div></div>}
+        {!importOnly && <div className="settings-danger-zone">
+          <button type="button" className="settings-row is-danger" onClick={(event) => openConfirmation(event.currentTarget)}><span><strong>{c.settings.clearAll}</strong><small>{c.settings.clearAllBody}</small></span><Trash size={19} weight="bold" aria-hidden="true" /></button>
+        </div>}
+        {confirming && <div className="inline-confirm" role="group" aria-labelledby="confirm-action-title" aria-describedby="confirm-action-description"><WarningCircle size={23} weight="fill" aria-hidden="true" /><div><strong id="confirm-action-title">{c.settings.confirmClearTitle}</strong><small id="confirm-action-description">{c.settings.confirmClearBody}</small></div><div><button ref={confirmCancel} type="button" className="cancel-action" onClick={cancelConfirmation}>{c.common.cancel}</button><button type="button" className="danger-action" disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await onClear(); onClose(); } catch (failure) { setError(financeError(failure, locale)); } finally { setBusy(false); } }}>{c.settings.confirmClearAction}</button></div></div>}
       </div>
     </SheetFrame>
   );

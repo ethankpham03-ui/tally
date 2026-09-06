@@ -1,18 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist } from 'next/font/google';
-import '@fontsource/be-vietnam-pro/400.css';
-import '@fontsource/be-vietnam-pro/400-italic.css';
-import '@fontsource/be-vietnam-pro/600.css';
-import '@fontsource/be-vietnam-pro/600-italic.css';
-import '@fontsource/be-vietnam-pro/700.css';
-import '@fontsource/be-vietnam-pro/700-italic.css';
 import './globals.css';
 import { APP_THEME_COLORS } from './theme-colors.ts';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin', 'latin-ext'],
-});
+import { THEME_BOOTSTRAP_SCRIPT } from './theme.ts';
 
 const siteUrl = 'https://tally.ethankpham.workers.dev';
 
@@ -58,17 +47,19 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  colorScheme: 'light dark',
-  themeColor: APP_THEME_COLORS.light,
 };
-
-const themeBootstrapScript = `(function(){try{var stored=window.localStorage.getItem('tally-theme');var theme=stored==='light'||stored==='dark'?stored:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');var root=document.documentElement;root.dataset.theme=theme;root.style.colorScheme=theme;var themeColor=document.querySelector('meta[name="theme-color"]');if(themeColor){themeColor.setAttribute('content',theme==='dark'?'${APP_THEME_COLORS.dark}':'${APP_THEME_COLORS.light}');}}catch(error){}})();`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head><script id="tally-theme-bootstrap" dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} /></head>
-      <body className={geistSans.variable}>
+      <head>
+        <meta name="theme-color" content={APP_THEME_COLORS.light} />
+        <meta name="color-scheme" content="light dark" />
+        <link rel="preload" href="/fonts/pf-beau-sans-book.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/cookie-run-bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <script id="tally-theme-bootstrap" dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+      </head>
+      <body>
         {children}
       </body>
     </html>
