@@ -1,14 +1,15 @@
 'use client';
 
-import { ArrowBendUpLeft, ArrowsLeftRight, MagnifyingGlass, PencilSimple, Plus, Receipt, Trash, Wallet, WarningCircle } from '@phosphor-icons/react';
+import { ArrowBendUpLeft, ArrowsLeftRight, CaretDown, MagnifyingGlass, PencilSimple, Plus, Receipt, Trash, Wallet, WarningCircle } from '@phosphor-icons/react';
 import { useRef, useState, type FormEvent } from 'react';
+import { AccountIcon } from './account-icons';
 import { CategoryIcon } from './category-icons';
 import { CategoryPicker, expenseCategoryIcon, expenseCategoryLabel } from './category-picker';
 import { SheetFrame, focusFirstInvalid } from './finance-dialog';
 import { accountDisplayName } from './accounts-ui';
 import { useI18n, type Locale } from './i18n';
 import {
-  CURRENCIES, convertToVnd, formatMoney, formatMoneyAmount, latestExchangeRate, majorAmountToMinor, parseMoneyInput,
+  CURRENCIES, convertToVnd, formatMoney, formatMoneyAmount, getDefaultAccountId, latestExchangeRate, majorAmountToMinor, parseMoneyInput,
   type Account, type Currency, type CustomExpenseCategory, type ExpenseCategoryId, type FinanceData, type Subscription, type Transaction,
 } from './finance-v4';
 import './ledger.css';
@@ -16,6 +17,8 @@ import './ledger.css';
 const copy = {
   en: {
     source: 'Payment account', receive: 'Receive into', choose: 'Choose an account', accounts: 'Manage accounts',
+    defaultSource: 'Your default account. Choose another to use it for future transactions after saving.',
+    rememberSource: 'This account will be your default for new transactions after saving.',
     refund: 'Refund', refundTitle: 'Record a refund', refundHelp: 'Returns reduce spending in the original category on the date received.',
     transfer: 'Transfer', adjustment: 'Balance adjustment', setup: 'Account setup', fee: 'Transfer fee', allSources: 'All accounts', sourceFilter: 'Filter by account',
     missingSource: 'Add an account to record this transaction.', chooseSource: 'Choose an active account.',
@@ -35,6 +38,8 @@ const copy = {
   },
   vi: {
     source: 'Thanh toán bằng', receive: 'Nhận vào', choose: 'Chọn nguồn tiền', accounts: 'Quản lý nguồn tiền',
+    defaultSource: 'Nguồn tiền mặc định. Chọn nguồn khác rồi lưu để dùng cho các giao dịch sau.',
+    rememberSource: 'Nguồn này sẽ là mặc định cho các giao dịch sau khi bạn lưu.',
     refund: 'Hoàn tiền', refundTitle: 'Ghi nhận hoàn tiền', refundHelp: 'Hoàn tiền giảm chi tiêu ở danh mục gốc vào ngày bạn nhận lại tiền.',
     transfer: 'Chuyển tiền', adjustment: 'Điều chỉnh số dư', setup: 'Thiết lập nguồn tiền', fee: 'Phí chuyển tiền', allSources: 'Tất cả nguồn tiền', sourceFilter: 'Lọc theo nguồn tiền',
     missingSource: 'Thêm nguồn tiền để ghi nhận giao dịch này.', chooseSource: 'Chọn một nguồn tiền đang sử dụng.',
@@ -72,6 +77,7 @@ export type LedgerDraft = {
   kind: 'income' | 'expense' | 'refund'; title: string; accountId: string; amount: number;
   category: ExpenseCategoryId; date: string; reportingAmount?: number;
   customCategory?: CustomExpenseCategory; refundOfId?: string; originalCurrency?: Currency; originalAmount?: number;
+  rememberAccount?: boolean;
 };
 
 export function TransactionSheet({ data, initial, initialAccountId, refundOf, today, onClose, onSave, onManageAccounts }: {
@@ -80,9 +86,11 @@ export function TransactionSheet({ data, initial, initialAccountId, refundOf, to
 }) {
   const { c, locale, localeTag } = useI18n();
   const l = copy[locale];
-  const sourceId = initial?.accountId ?? refundOf?.accountId ?? initialAccountId;
+  const defaultAccountId = getDefaultAccountId(data);
+  const sourceId = initial?.accountId ?? refundOf?.accountId ?? initialAccountId ?? defaultAccountId;
   const accounts = selectableAccounts(data, initial?.accountId);
-  const [accountId, setAccountId] = useState(accounts.find((item) => item.id === sourceId)?.id ?? accounts[0]?.id ?? '');
+  const [accountId, setAccountId] = useState(accounts.find((item) => item.id === sourceId)?.id ?? defaultAccountId ?? accounts[0]?.id ?? '');
+  const [accountChanged, setAccountChanged] = useState(false);
   const account = data.accounts.find((item) => item.id === accountId);
   const currency = account?.currency ?? 'VND';
   const [kind, setKind] = useState<LedgerDraft['kind']>(refundOf ? 'refund' : initial?.kind === 'income' || initial?.kind === 'refund' ? initial.kind : 'expense');
@@ -99,6 +107,18 @@ export function TransactionSheet({ data, initial, initialAccountId, refundOf, to
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const canRememberAccount = !initial && !refundOf && kind !== 'refund';
+  const sourceHelp = canRememberAccount ? accountChanged ? l.rememberSource : accountId === defaultAccountId ? l.defaultSource : undefined : undefined;
+  function changeAccount(nextId: string) {
+    if (nextId === accountId) return;
+    const selected = accounts.find((item) => item.id === nextId);
+    setAccountId(nextId);
+    setAccountChanged(true);
+    if (selected?.currency !== currency) {
+      setAmount('');
+      setReporting('');
+    }
+  }
   function changeAmount(value: string) {
     setAmount(value);
     if (currency !== 'VND') setReporting(suggestedReporting(data, value, currency, date));
@@ -126,6 +146,7 @@ export function TransactionSheet({ data, initial, initialAccountId, refundOf, to
         customCategory: kind === 'income' ? undefined : customCategory,
         refundOfId: refundOf?.id ?? initial?.refundOfId,
         originalCurrency: merchant === undefined ? undefined : merchantCurrency, originalAmount: merchant ?? undefined,
+        rememberAccount: canRememberAccount && accountChanged,
       }, initial);
       onClose();
     } catch (error) { setErrors({ form: error instanceof Error ? error.message : l.failed }); }
@@ -137,7 +158,19 @@ export function TransactionSheet({ data, initial, initialAccountId, refundOf, to
         <form ref={formRef} onSubmit={submit} noValidate>
           <fieldset disabled={busy} className="ledger-fields">
             <div className="type-switch" role="group" aria-label={c.transactionForm.typeAria}>{(['expense', 'income', 'refund'] as const).map((value) => <button key={value} type="button" disabled={Boolean(initial?.subscriptionPaymentId) && value !== 'expense'} className={kind === value ? 'is-active' : ''} aria-pressed={kind === value} onClick={() => setKind(value)}>{value === 'refund' ? l.refund : c.transactionForm.type[value]}</button>)}</div>
-            <label className="field"><span>{kind === 'expense' ? l.source : l.receive}</span><select value={accountId} onChange={(event) => { setAccountId(event.target.value); setAmount(''); setReporting(''); }} aria-invalid={Boolean(errors.account)}><option value="" disabled>{l.choose}</option>{accounts.map((item) => <option key={item.id} value={item.id} disabled={item.archived}>{accountDisplayName(item, locale)} · {item.currency}{item.archived ? ` · ${l.archived}` : ''}</option>)}</select>{errors.account && <small className="field-error" role="alert">{errors.account}</small>}</label>
+            <label className="field" htmlFor="transaction-account">
+              <span>{kind === 'expense' ? l.source : l.receive}</span>
+              <span className="ledger-source-control">
+                {account && <span className="ledger-source-icon"><AccountIcon account={account} size={30} /></span>}
+                <select id="transaction-account" value={accountId} onChange={(event) => changeAccount(event.target.value)} aria-invalid={Boolean(errors.account)} aria-describedby={[sourceHelp ? 'transaction-account-help' : '', errors.account ? 'transaction-account-error' : ''].filter(Boolean).join(' ') || undefined}>
+                  <option value="" disabled>{l.choose}</option>
+                  {accounts.map((item) => <option key={item.id} value={item.id} disabled={item.archived}>{accountDisplayName(item, locale)} · {item.currency}{item.archived ? ` · ${l.archived}` : ''}</option>)}
+                </select>
+                <CaretDown className="ledger-source-caret" size={18} weight="bold" aria-hidden="true" />
+              </span>
+            </label>
+            {sourceHelp && <small id="transaction-account-help" className="field-help ledger-source-help">{sourceHelp}</small>}
+            {errors.account && <small id="transaction-account-error" className="field-error ledger-source-help" role="alert">{errors.account}</small>}
             <label className="field"><span>{c.transactionForm.name}</span><input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder={c.transactionForm.namePlaceholder} aria-invalid={Boolean(errors.title)} />{errors.title && <small className="field-error" role="alert">{errors.title}</small>}</label>
             <label className="field"><span>{c.transactionForm.amount}</span><div className="money-input"><input inputMode={['VND', 'JPY', 'KRW'].includes(currency) ? 'numeric' : 'decimal'} value={amount} onChange={(event) => changeAmount(event.target.value.replace(',', '.'))} placeholder="0" aria-invalid={Boolean(errors.amount)} /><strong>{currency}</strong></div>{errors.amount && <small className="field-error" role="alert">{errors.amount}</small>}</label>
             {kind !== 'income' && <CategoryPicker label={c.transactionForm.category} value={category} customCategories={customCategory ? [...data.customCategories, customCategory] : data.customCategories} onChange={(value, created) => { setCategory(value); setCustomCategory(created); }} />}
@@ -239,7 +272,7 @@ export function PaymentSheet({ data, subscription, today, onClose, onSave, onMan
   return <SheetFrame title={l.paymentTitle} subtitle={l.paymentHelp} labelledBy="payment-sheet-title" onClose={onClose} busy={busy}>
     <div className="payment-invoice"><strong>{subscription.name}</strong><span>{l.invoice}: {nativeMoney(majorAmountToMinor(subscription.amount, subscription.currency), subscription.currency, localeTag)}</span><span>{l.occurrence}: {formatDate(occurrence)}</span></div>
     {!accounts.length ? <div className="empty-state"><strong>{l.missingSource}</strong><button type="button" onClick={onManageAccounts}>{l.accounts}</button></div> : <form onSubmit={submit} noValidate><fieldset className="ledger-fields" disabled={busy}>
-      <label className="field"><span>{l.source}</span><select autoFocus value={accountId} onChange={(event) => { const selected = accounts.find((item) => item.id === event.target.value); setAccountId(event.target.value); setAmount(selected?.currency === subscription.currency ? String(subscription.amount) : ''); setReporting(''); }}>{accounts.map((item) => <option key={item.id} value={item.id}>{accountDisplayName(item, locale)} · {item.currency}</option>)}</select></label>
+      <label className="field"><span>{l.source}</span><span className="ledger-source-control">{account && <span className="ledger-source-icon"><AccountIcon account={account} size={30} /></span>}<select autoFocus value={accountId} onChange={(event) => { const selected = accounts.find((item) => item.id === event.target.value); setAccountId(event.target.value); if (selected?.currency !== currency) { setAmount(''); setReporting(''); } }}>{accounts.map((item) => <option key={item.id} value={item.id}>{accountDisplayName(item, locale)} · {item.currency}</option>)}</select><CaretDown className="ledger-source-caret" size={18} weight="bold" aria-hidden="true" /></span></label>
       <label className="field"><span>{l.actual}</span><div className="money-input"><input inputMode="decimal" value={amount} onChange={(event) => { const value = event.target.value.replace(',', '.'); setAmount(value); if (currency !== 'VND') setReporting(suggestedReporting(data, value, currency, date)); }} placeholder="0" /><strong>{currency}</strong></div></label>
       <label className="field"><span>{l.paymentDate}</span><input type="date" value={date} max={today} min={account?.openingDate ?? undefined} onChange={(event) => setDate(event.target.value)} /></label>
       {currency !== 'VND' && <label className="field"><span>{l.converted}</span><input inputMode="numeric" value={reporting} onChange={(event) => setReporting(event.target.value)} /><small className="field-help">{l.conversionHelp} {l.noConversion}</small></label>}

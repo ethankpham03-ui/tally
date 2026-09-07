@@ -78,7 +78,7 @@ import {
   type Subscription,
   type SubscriptionCurrency,
   type Transaction,
-  saveLedgerTransaction, deleteLedgerTransaction, type Account, type AccountInput,
+  saveLedgerTransaction, deleteLedgerTransaction, setDefaultAccount, type Account, type AccountInput,
 } from './finance-v4';
 import { createFinanceStorageController, type FinanceStorageController } from './finance-storage';
 import { initializeFinanceStorage } from './finance-bootstrap';
@@ -350,7 +350,6 @@ function AppContent() {
   const dataRef = useRef(data);
   const savingRef = useRef(false);
   const dialogRevisionRef = useRef<number | null>(null);
-  const [lastAccountId, setLastAccountId] = useState<string>();
   const toastSequence = useRef(0);
 
   const commitView = useCallback((nextView: View) => {
@@ -559,15 +558,15 @@ function AppContent() {
     await updateData((current) => {
       const withCategory = input.customCategory && !current.customCategories.some((item) => item.id === input.customCategory?.id)
         ? { ...current, customCategories: [...current.customCategories, input.customCategory] } : current;
-      return saveLedgerTransaction(withCategory, {
+      const saved = saveLedgerTransaction(withCategory, {
         ...(existing ?? {}), title: input.title, titleKey: undefined, kind: input.kind, accountId: input.accountId,
         category: input.kind === 'income' ? 'income' : input.category, date: input.date, amount: sign * input.amount,
         reportingAmount: input.reportingAmount === undefined ? undefined : sign * input.reportingAmount,
         reportingRate: sameValuation ? existing.reportingRate : undefined, originalAmount: input.originalAmount, originalCurrency: input.originalCurrency,
         refundOfId: input.kind === 'refund' ? input.refundOfId : undefined,
       }, existing?.id);
+      return input.rememberAccount && !existing && input.kind !== 'refund' ? setDefaultAccount(saved, input.accountId) : saved;
     });
-    setLastAccountId(input.accountId);
     showToast(existing ? c.toast.transactionUpdated : c.toast.transactionAdded);
   }
 
@@ -731,7 +730,7 @@ function AppContent() {
         ? c.storage.error
         : null;
   const activeDialog = dialog?.kind === 'transaction'
-    ? <TransactionSheet key={'transaction-' + (dialog.item?.id ?? dialog.refundOf?.id ?? 'new')} data={data} initial={dialog.item} initialAccountId={dialog.accountId ?? lastAccountId} refundOf={dialog.refundOf} today={today} onClose={closeDialog} onSave={saveTransaction} onManageAccounts={() => openDialog({ kind: 'accounts' })} />
+    ? <TransactionSheet key={'transaction-' + (dialog.item?.id ?? dialog.refundOf?.id ?? 'new')} data={data} initial={dialog.item} initialAccountId={dialog.accountId} refundOf={dialog.refundOf} today={today} onClose={closeDialog} onSave={saveTransaction} onManageAccounts={() => openDialog({ kind: 'accounts' })} />
     : dialog?.kind === 'accounts'
       ? <AccountsSheet key="accounts" data={data} onChange={updateData} onClose={closeDialog} initialAccountId={dialog.accountId} initialTransactionId={dialog.transactionId} initialTransfer={dialog.transfer} onAddTransaction={(accountId) => openDialog({ kind: 'transaction', accountId })} onEditTransaction={editTransaction} />
     : dialog?.kind === 'payment'
@@ -837,6 +836,7 @@ function AppContent() {
                 <Overview
                   data={data}
                   onAccounts={(accountId) => openDialog({ kind: 'accounts', accountId })}
+                  onChangeAccounts={updateData}
                   summary={summary}
                   transactions={transactions}
                   subscriptions={activeSubscriptions}
@@ -898,9 +898,10 @@ function AppContent() {
   );
 }
 
-function Overview({ data, onAccounts, summary, transactions, subscriptions, subscriptionTotals, today, onNavigate, onAddTransaction }: {
+function Overview({ data, onAccounts, onChangeAccounts, summary, transactions, subscriptions, subscriptionTotals, today, onNavigate, onAddTransaction }: {
   data: FinanceData;
   onAccounts: (accountId?: string) => void;
+  onChangeAccounts: (updater: (current: FinanceData) => FinanceData) => Promise<unknown>;
   summary: ReturnType<typeof deriveFinanceSummary>;
   transactions: Transaction[];
   subscriptions: Subscription[];
@@ -933,7 +934,7 @@ function Overview({ data, onAccounts, summary, transactions, subscriptions, subs
           </div>
           {summary.unconvertedTransactionCount > 0 && <small className="valuation-note is-warning">{vi ? `${summary.unconvertedTransactionCount} giao dịch tháng này chưa quy đổi, chưa tính vào thu/chi.` : `${summary.unconvertedTransactionCount} transactions this month are not converted and are excluded from income/spending.`}</small>}
         </section>
-        <AccountsOverview data={data} onOpen={onAccounts} />
+        <AccountsOverview data={data} onOpen={onAccounts} onChange={onChangeAccounts} />
         <RenewalSchedule subscriptions={upcoming} today={today} onOpen={() => onNavigate('subscriptions')} className="mobile-renewal-schedule surface-raised" />
         <CashflowPanel data={data} transactions={transactions} today={today} period={period} onPeriodChange={setPeriod} />
         <section className="activity-panel surface-raised">

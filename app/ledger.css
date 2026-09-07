@@ -4,6 +4,13 @@
 .ledger-fields .type-switch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .ledger-fields .type-switch button { min-width: 0; padding: 6px 4px; white-space: normal; line-height: var(--type-line-label); }
 .ledger-fields .field-error { display: flex; align-items: start; gap: 8px; }
+.ledger-source-control { position: relative; display: block; min-width: 0; }
+.field .ledger-source-control select { display: block; min-width: 0; max-width: 100%; padding-inline: 52px 40px; appearance: none; -webkit-appearance: none; text-overflow: ellipsis; }
+.ledger-source-icon, .ledger-source-caret { position: absolute; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.ledger-source-icon { inset-inline-start: 12px; display: grid; place-items: center; }
+.ledger-source-caret { inset-inline-end: 14px; color: var(--muted); }
+.ledger-fields .ledger-source-help { margin-top: -12px; }
+.ledger-source-control select[aria-invalid='true'] { border-color: var(--negative); }
 .merchant-details { border-top: 1px solid var(--line); padding-top: 16px; }
 .merchant-details summary { cursor: pointer; min-height: 44px; color: var(--muted); font-size: var(--type-control-size); font-weight: 600; }
 .merchant-details .field-help { margin: 0 0 16px; }

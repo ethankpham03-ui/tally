@@ -50,6 +50,8 @@ Most expense trackers treat recurring subscriptions as a separate list. Tally co
 - Set up cash, bank, wallet, and credit-card opening balances in a short onboarding flow, import an existing backup, or start with zero cash and set up later.
 - Add, edit, search, filter, and remove transactions with Undo.
 - Manage money sources, inspect account histories, reconcile balances, and archive accounts while preserving history.
+- Reorder sources with touch, mouse, or keyboard, and keep a saved default source for new transactions.
+- Recognize cash with Apple Wallet artwork and banks with bundled official banking app icons for Vietnam, the US, and the UK.
 - Transfer between accounts, including different currencies, with a separately recorded fee.
 - Track credit-card debt, credit balances, limits, statements, and partial repayments without counting purchases twice.
 - Record refunds against spending categories and use the actual account debit for foreign subscription payments.

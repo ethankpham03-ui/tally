@@ -1,0 +1,23 @@
+.account-bank-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--account-logo-size);
+  height: var(--account-logo-size);
+  border-radius: 22%;
+  overflow: hidden;
+  background: #fff;
+}
+
+.account-bank-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-cash-wallet {
+  display: block;
+  flex: 0 0 auto;
+}

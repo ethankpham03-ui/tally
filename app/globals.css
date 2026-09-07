@@ -1461,7 +1461,9 @@ select {
 
 .field {
   min-width: 0;
+  min-inline-size: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   color: var(--ink);
   font-size: var(--type-label-size);
@@ -1483,6 +1485,28 @@ select {
 
 .field input,
 .field select { padding: 0 14px; }
+/* Safari's native date value must shrink within the form grid on iPhone. */
+.field input[type='date'] {
+  display: block;
+  min-width: 0;
+  min-inline-size: 0;
+  width: 100%;
+  inline-size: 100%;
+  max-width: 100%;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: start;
+}
+.field input[type='date']::-webkit-date-and-time-value {
+  min-inline-size: 0;
+  text-align: start;
+}
+.field input[type='date']::-webkit-datetime-edit {
+  min-inline-size: 0;
+  padding: 0;
+}
 .field input:focus-visible,
 .field select:focus-visible { border-color: var(--accent); outline-offset: 2px; }
 .field input::placeholder { color: var(--muted); opacity: 1; }

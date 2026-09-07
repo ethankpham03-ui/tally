@@ -12,6 +12,7 @@ export type Account = {
   id: string; name: string; kind: AccountKind; currency: Currency;
   openingBalance: number; openingDate: string | null; archived: boolean;
   creditLimit?: number;
+  bankId?: string;
 };
 export type AccountInput = Omit<Account, 'id' | 'archived'> & { id?: string; archived?: boolean };
 export type ExchangeRate = { currency: Currency; rate: string; date: string; source: string };
@@ -36,6 +37,7 @@ export type FinanceData = {
   version: typeof FINANCE_DATA_VERSION; mode: legacy.FinanceMode; updatedAt: string;
   revision: number; setupComplete: boolean; openingBalance: 0;
   onboarding?: 'pending' | 'completed' | 'skipped';
+  defaultAccountId?: string;
   accounts: Account[]; transactions: Transaction[]; subscriptions: Subscription[];
   budgets: legacy.Budget[]; subscriptionPayments: SubscriptionPayment[];
   customCategories: legacy.CustomExpenseCategory[]; statements: CardStatement[];
@@ -77,7 +79,12 @@ function requireMoney(value: number, positive = false) {
 }
 function dateFor(reference = new Date()) { return legacy.localTodayIso(reference); }
 function commit(data: FinanceData, patch: Partial<FinanceData>): FinanceData {
-  const next: FinanceData = { ...data, ...patch, mode: 'personal', revision: sumMoney([data.revision, 1]), updatedAt: new Date().toISOString() };
+  // Pin an older ledger's existing fallback before account edits or reordering.
+  const next: FinanceData = { ...data, defaultAccountId: getDefaultAccountId(data), ...patch,
+    mode: 'personal', revision: sumMoney([data.revision, 1]), updatedAt: new Date().toISOString() };
+  const defaultAccountId = getDefaultAccountId(next);
+  if (defaultAccountId === undefined) delete next.defaultAccountId;
+  else next.defaultAccountId = defaultAccountId;
   const result = validateFinanceData(next);
   if (!result.valid) throw new Error(result.issues.join('; '));
   return result.data;
@@ -87,6 +94,28 @@ function requireAccount(data: FinanceData, id: string, allowArchived = false): A
   if (!account) throw new Error('Account not found');
   if (!allowArchived && account.archived) throw new Error('Account is archived');
   return account;
+}
+/** Older ledgers prefer their first cash source, then their first usable source. */
+export function getDefaultAccountId(data: Pick<FinanceData, 'accounts' | 'defaultAccountId'>): string | undefined {
+  const active = data.accounts.filter((account) => !account.archived && account.kind !== 'legacy');
+  return active.find((account) => account.id === data.defaultAccountId)?.id
+    ?? active.find((account) => account.kind === 'cash')?.id ?? active[0]?.id;
+}
+export function setDefaultAccount(data: FinanceData, id: string): FinanceData {
+  const account = requireAccount(data, id);
+  if (account.kind === 'legacy') throw new Error('Choose an active real source type');
+  if (data.defaultAccountId === id) return data;
+  return commit(data, { defaultAccountId: id });
+}
+/** Reorder all active real sources; archived and historical slots stay in place. */
+export function reorderAccounts(data: FinanceData, orderedIds: readonly string[]): FinanceData {
+  const active = data.accounts.filter((account) => !account.archived && account.kind !== 'legacy');
+  const byId = new Map(active.map((account) => [account.id, account]));
+  if (orderedIds.length !== active.length || new Set(orderedIds).size !== orderedIds.length
+    || orderedIds.some((id) => !byId.has(id))) throw new Error('Provide each active source exactly once');
+  let index = 0;
+  return commit(data, { accounts: data.accounts.map((account) => account.archived || account.kind === 'legacy'
+    ? account : byId.get(orderedIds[index++])!) });
 }
 export function accountEffects(transaction: Transaction): Array<{ accountId: string; amount: number }> {
   return transaction.kind === 'transfer'
@@ -323,8 +352,13 @@ export function validateFinanceData(value: unknown): FinanceDataValidationResult
     if (account.openingDate === null ? account.kind !== 'legacy' : !legacy.isValidDateOnly(account.openingDate)) issues.push(`${path}.openingDate is invalid`);
     if (typeof account.archived !== 'boolean') issues.push(`${path}.archived must be a boolean`);
     if (account.creditLimit !== undefined && (account.kind !== 'credit_card' || !isMoney(account.creditLimit) || account.creditLimit < 0)) issues.push(`${path}.creditLimit is invalid`);
+    if (account.bankId !== undefined && (typeof account.bankId !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/.test(account.bankId))) issues.push(`${path}.bankId is invalid`);
   });
   const accountMap = new Map(accounts.filter(isRecord).map((account) => [account.id, account]));
+  if (value.defaultAccountId !== undefined) {
+    const defaultAccount = typeof value.defaultAccountId === 'string' ? accountMap.get(value.defaultAccountId) : undefined;
+    if (!isText(value.defaultAccountId) || !defaultAccount || defaultAccount.archived || defaultAccount.kind === 'legacy') issues.push('defaultAccountId must reference an active real source');
+  }
   const rateKeys = new Set<string>();
   rates.forEach((rate, index) => {
     if (!validateRate(rate, `exchangeRates[${index}]`, issues)) return;
@@ -645,6 +679,8 @@ export function deleteAccount(data: FinanceData, id: string): FinanceData {
   if (account.openingBalance !== 0 || data.transactions.some((transaction) => accountEffects(transaction).some((effect) => effect.accountId === id))
     || data.subscriptions.some((subscription) => subscription.accountId === id) || data.statements.some((statement) => statement.accountId === id)) throw new Error('An account with history must be archived');
   if (data.accounts.length <= 1) throw new Error('Keep at least one account');
+  if (!account.archived && account.kind !== 'legacy'
+    && !data.accounts.some((item) => item.id !== id && !item.archived && item.kind !== 'legacy')) throw new Error('Keep at least one active source');
   return commit(data, { accounts: data.accounts.filter((item) => item.id !== id) });
 }
 export function reconcileAccount(data: FinanceData, id: string, targetBalance: number, date: string, reason: string): FinanceData {

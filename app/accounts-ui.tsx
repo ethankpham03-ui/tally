@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Archive, ArrowLeft, ArrowsLeftRight, Bank, Check, CreditCard, CurrencyCircleDollar, PencilSimple, Plus, Receipt, Trash, Wallet, X } from '@phosphor-icons/react';
+import { Archive, ArrowLeft, ArrowsLeftRight, Check, PencilSimple, Plus, Trash, Wallet, X } from '@phosphor-icons/react';
 import { useI18n, type Locale } from './i18n';
+import { AccountIcon } from './account-icons';
+import { BANKS, getBank, inferBank, type BankCountry } from './bank-catalog';
+import { SortableAccountRows } from './account-sortable';
 import { financeError } from './finance-errors';
 import {
   CURRENCIES, archiveAccount, deleteAccount, deleteStatement, deriveAccountBalances,
   deriveAccountReport, deriveStatementStatus, formatMoney, formatMoneyAmount, parseMoneyInput,
-  previewAccountSetup, reconcileAccount, saveAccount, saveStatement, saveTransfer,
+  previewAccountSetup, reconcileAccount, saveAccount, saveStatement, saveTransfer, reorderAccounts, getDefaultAccountId, setDefaultAccount,
   setExchangeRate, setupAccounts, toMajorUnits, unarchiveAccount, latestExchangeRate, deleteLedgerTransaction,
   type Account, type AccountInput, type CardStatement, type FinanceData, type Transaction,
 } from './finance-v4';
@@ -31,7 +34,6 @@ function useAccountCopy() { const { locale } = useI18n(); return copy[locale]; }
 export function formatAccountMoney(amount: number, currency: Currency, locale: Locale) {
   return formatMoney(amount, currency, locale === 'vi' ? 'vi-VN' : 'en-US');
 }
-function SourceIcon({ kind, size = 20 }: { kind: Account['kind']; size?: number }) { const Icon = kind === 'cash' ? Wallet : kind === 'credit_card' ? CreditCard : kind === 'bank' ? Bank : kind === 'ewallet' ? CurrencyCircleDollar : Receipt; return <Icon size={size} weight="bold" aria-hidden="true" />; }
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) { return <label className="field"><span>{label}</span>{children}{hint && <small className="field-help">{hint}</small>}</label>; }
 function Note({ children, warning = false }: { children: ReactNode; warning?: boolean }) { return <p className={`account-note${warning ? ' is-warning' : ''}`}>{children}</p>; }
 function FormProblem({ message }: { message: string }) { const ref = useRef<HTMLDivElement>(null); useEffect(() => { ref.current?.scrollIntoView({ block: 'nearest' }); ref.current?.focus({ preventScroll: true }); }, [message]); return <div className="account-form-error" role="alert" tabIndex={-1} ref={ref}>{message}</div>; }
@@ -46,7 +48,12 @@ function getTitle(account: Account, c: AccountCopy) {
 }
 export function accountDisplayName(account: Account, locale: Locale) { return getTitle(account, copy[locale]); }
 
-export function AccountsOverview({ data, onOpen }: { data: FinanceData; onOpen: (accountId?: string) => void }) {
+function reorderGroup(data: FinanceData, ids: string[]) {
+  const group = new Set(ids); let index = 0;
+  return reorderAccounts(data, data.accounts.filter((account) => !account.archived && account.kind !== 'legacy').map((account) => group.has(account.id) ? ids[index++] : account.id));
+}
+
+export function AccountsOverview({ data, onOpen, onChange }: { data: FinanceData; onOpen: (accountId?: string) => void; onChange: (updater: Mutation) => Promise<unknown> }) {
   const { locale } = useI18n(); const c = copy[locale];
   const balances = deriveAccountBalances(data).filter(({ account, balance }) => (!account.archived || balance !== 0) && (account.kind !== 'legacy' || balance !== 0 || !data.setupComplete));
   return <section className="accounts-overview surface-raised" aria-labelledby="accounts-overview-title">
@@ -55,9 +62,9 @@ export function AccountsOverview({ data, onOpen }: { data: FinanceData; onOpen: 
     {balances.length === 0 && <div className="account-empty"><Wallet size={28} aria-hidden="true" /><strong>{c.noAccounts}</strong><p>{c.noAccountsHelp}</p><button type="button" className="quiet-link" onClick={() => onOpen()}><Plus size={17} />{c.add}</button></div>}
     {(['assets', 'cards'] as const).map((group) => {
       const rows = balances.filter(({ account }) => (account.kind === 'credit_card') === (group === 'cards'));
-      return rows.length > 0 && <div className="account-overview-group" key={group}><h3>{c[group]}</h3><div className="account-source-grid">{rows.map(({ account, balance, reportingBalance }) => <button type="button" className="account-source-row" onClick={() => onOpen(account.id)} key={account.id}>
-        <span className={`account-source-icon${account.kind === 'credit_card' ? ' is-card' : ''}`}><SourceIcon kind={account.kind} /></span><span className="account-source-copy"><strong>{getTitle(account, c)}</strong><small>{account.kind === 'credit_card' ? (balance < 0 ? c.debt : c.credit) : c[account.kind]}</small></span><span className="account-source-value"><strong>{formatAccountMoney(account.kind === 'credit_card' ? Math.abs(balance) : balance, account.currency, locale)}</strong>{account.currency !== 'VND' && <small className={reportingBalance === null ? 'account-missing-rate' : ''}>{reportingBalance === null ? c.unconverted : `≈ ${formatAccountMoney(account.kind === 'credit_card' ? Math.abs(reportingBalance) : reportingBalance, 'VND', locale)}`}</small>}</span>
-      </button>)}</div></div>;
+      return rows.length > 0 && <div className="account-overview-group" key={group}><h3>{c[group]}</h3><SortableAccountRows onReorder={(ids) => onChange((current) => reorderGroup(current, ids))} rows={rows.map(({ account, balance, reportingBalance }) => ({ id: account.id, label: getTitle(account, c), movable: !account.archived && account.kind !== 'legacy', content: <button type="button" className="account-source-row" onClick={() => onOpen(account.id)}>
+        <span className={`account-source-icon${account.kind === 'credit_card' ? ' is-card' : ''}`}><AccountIcon account={account} size={30} /></span><span className="account-source-copy"><strong>{getTitle(account, c)}</strong><small>{account.kind === 'credit_card' ? (balance < 0 ? c.debt : c.credit) : c[account.kind]}</small>{getDefaultAccountId(data) === account.id && <small className="account-default-label">{locale === 'vi' ? 'Mặc định' : 'Default'}</small>}</span><span className="account-source-value"><strong>{formatAccountMoney(account.kind === 'credit_card' ? Math.abs(balance) : balance, account.currency, locale)}</strong>{account.currency !== 'VND' && <small className={reportingBalance === null ? 'account-missing-rate' : ''}>{reportingBalance === null ? c.unconverted : `≈ ${formatAccountMoney(account.kind === 'credit_card' ? Math.abs(reportingBalance) : reportingBalance, 'VND', locale)}`}</small>}</span>
+      </button> }))} /></div>;
     })}
   </section>;
 }
@@ -102,7 +109,7 @@ export function AccountsSheet({ data, onChange, onClose, initialAccountId, initi
       <header className="sheet-header"><div>{view.kind !== 'list' && <button type="button" className="account-back" onClick={back} disabled={busy}><ArrowLeft size={16} weight="bold" aria-hidden="true" />{c.back}</button>}<h2 id={labelId}>{title}</h2>{view.kind === 'list' && <p>{c.subtitle}</p>}</div><button type="button" onClick={onClose} aria-label={c.close} disabled={busy}><X size={21} weight="bold" aria-hidden="true" /></button></header>
       {error && <FormProblem message={error} />}{notice && <p className="account-save-notice" role="status"><Check size={16} aria-hidden="true" />{notice}</p>}
       <fieldset className="account-content-fieldset" disabled={busy}>
-        {view.kind === 'list' && <AccountsList data={data} go={go} />}
+        {view.kind === 'list' && <AccountsList data={data} go={go} commit={commit} />}
         {view.kind === 'detail' && account && <AccountDetail data={data} account={account} go={go} commit={commit} onAddTransaction={onAddTransaction} onEditTransaction={onEditTransaction} />}
         {view.kind === 'account' && <AccountForm key={view.id ?? 'new'} initial={data.accounts.find((item) => item.id === view.id)} commit={commit} busy={busy} onCancel={back} onSaved={(id) => setView({ kind: 'detail', id })} />}
         {view.kind === 'rates' && <RatesPanel data={data} commit={commit} busy={busy} />}
@@ -117,14 +124,14 @@ export function AccountsSheet({ data, onChange, onClose, initialAccountId, initi
   </div>;
 }
 
-function AccountsList({ data, go }: { data: FinanceData; go: (view: View) => void }) {
+function AccountsList({ data, go, commit }: { data: FinanceData; go: (view: View) => void; commit: Commit }) {
   const { locale } = useI18n(); const c = copy[locale]; const balances = deriveAccountBalances(data);
   return <div>
     <div className="account-toolbar"><button type="button" className="primary-action" onClick={() => go(data.setupComplete ? { kind: 'account' } : { kind: 'setup' })}><Plus size={18} aria-hidden="true" />{c.add}</button><button type="button" className="cancel-action" onClick={() => go({ kind: 'transfer' })}><ArrowsLeftRight size={18} aria-hidden="true" />{c.transfer}</button><button type="button" className="cancel-action" onClick={() => go({ kind: 'rates' })}>{c.rates}</button></div>
     {!data.setupComplete && <button type="button" className="accounts-setup-entry" onClick={() => go({ kind: 'setup' })}><span><strong>{c.setup}</strong><small>{c.setupHelp}</small></span><Plus size={20} aria-hidden="true" /></button>}
     {(['assets', 'cards', 'legacy', 'archivedGroup'] as const).map((group) => {
       const rows = balances.filter(({ account }) => group === 'archivedGroup' ? account.archived : !account.archived && (group === 'legacy' ? account.kind === 'legacy' : group === 'cards' ? account.kind === 'credit_card' : account.kind !== 'legacy' && account.kind !== 'credit_card'));
-      return rows.length > 0 && <section className="account-list-section" key={group}><h3 className="account-section-title">{c[group]}</h3><div className="account-source-grid">{rows.map(({ account, balance, reportingBalance }) => <button key={account.id} type="button" className="account-source-row" onClick={() => go({ kind: 'detail', id: account.id })}><span className={`account-source-icon${account.kind === 'credit_card' ? ' is-card' : ''}`}><SourceIcon kind={account.kind} /></span><span className="account-source-copy"><strong>{getTitle(account, c)}</strong><small>{account.currency} · {account.kind === 'credit_card' ? balance < 0 ? c.debt : c.credit : c[account.kind]}</small></span><span className="account-source-value"><strong>{formatAccountMoney(account.kind === 'credit_card' ? Math.abs(balance) : balance, account.currency, locale)}</strong>{account.currency !== 'VND' && <small className={reportingBalance === null ? 'account-missing-rate' : ''}>{reportingBalance === null ? c.unconverted : `≈ ${formatAccountMoney(account.kind === 'credit_card' ? Math.abs(reportingBalance) : reportingBalance, 'VND', locale)}`}</small>}</span></button>)}</div></section>;
+      return rows.length > 0 && <section className="account-list-section" key={group}><h3 className="account-section-title">{c[group]}</h3><SortableAccountRows onReorder={(ids) => commit((current) => reorderGroup(current, ids))} rows={rows.map(({ account, balance, reportingBalance }) => ({ id: account.id, label: getTitle(account, c), movable: !account.archived && account.kind !== 'legacy', content: <button type="button" className="account-source-row" onClick={() => go({ kind: 'detail', id: account.id })}><span className={`account-source-icon${account.kind === 'credit_card' ? ' is-card' : ''}`}><AccountIcon account={account} size={30} /></span><span className="account-source-copy"><strong>{getTitle(account, c)}</strong><small>{account.currency} · {account.kind === 'credit_card' ? balance < 0 ? c.debt : c.credit : c[account.kind]}</small>{getDefaultAccountId(data) === account.id && <small className="account-default-label">{locale === 'vi' ? 'Mặc định' : 'Default'}</small>}</span><span className="account-source-value"><strong>{formatAccountMoney(account.kind === 'credit_card' ? Math.abs(balance) : balance, account.currency, locale)}</strong>{account.currency !== 'VND' && <small className={reportingBalance === null ? 'account-missing-rate' : ''}>{reportingBalance === null ? c.unconverted : `≈ ${formatAccountMoney(account.kind === 'credit_card' ? Math.abs(reportingBalance) : reportingBalance, 'VND', locale)}`}</small>}</span></button> }))} /></section>;
     })}
   </div>;
 }
@@ -138,7 +145,8 @@ function AccountDetail({ data, account, go, commit, onAddTransaction, onEditTran
   const unused = account.openingBalance === 0 && !data.transactions.some((item) => item.accountId === account.id || item.toAccountId === account.id) && !subscriptions.length && !statements.length;
   const kindLabels = { income: c.income, expense: c.expense, refund: c.refund, transfer: c.transfer, adjustment: c.adjustment };
   return <div className="account-detail">
-    <div className="account-detail-balance"><span className={`account-source-icon${account.kind === 'credit_card' ? ' is-card' : ''}`}><SourceIcon kind={account.kind} size={26} /></span><div><span>{account.kind === 'credit_card' ? b.balance < 0 ? c.debt : c.credit : c.balance}</span><strong>{money(account.kind === 'credit_card' ? Math.abs(b.balance) : b.balance)}</strong>{account.currency !== 'VND' && <small>{b.reportingBalance === null ? c.unconverted : `${c.estimated} ≈ ${formatAccountMoney(account.kind === 'credit_card' ? Math.abs(b.reportingBalance) : b.reportingBalance, 'VND', locale)}${quote ? ` · ${c.rateDate} ${formatDate(quote.date)}` : ''}`}</small>}</div></div>
+    <div className="account-detail-balance"><span className={`account-source-icon${account.kind === 'credit_card' ? ' is-card' : ''}`}><AccountIcon account={account} size={38} /></span><div><span>{account.kind === 'credit_card' ? b.balance < 0 ? c.debt : c.credit : c.balance}</span><strong>{money(account.kind === 'credit_card' ? Math.abs(b.balance) : b.balance)}</strong>{account.currency !== 'VND' && <small>{b.reportingBalance === null ? c.unconverted : `${c.estimated} ≈ ${formatAccountMoney(account.kind === 'credit_card' ? Math.abs(b.reportingBalance) : b.reportingBalance, 'VND', locale)}${quote ? ` · ${c.rateDate} ${formatDate(quote.date)}` : ''}`}</small>}</div></div>
+    {!account.archived && account.kind !== 'legacy' && <button type="button" className="account-default-action" disabled={getDefaultAccountId(data) === account.id} onClick={() => void commit((current) => setDefaultAccount(current, account.id))}><Check size={18} aria-hidden="true" />{getDefaultAccountId(data) === account.id ? locale === 'vi' ? 'Nguồn tiền mặc định' : 'Default account' : locale === 'vi' ? 'Đặt làm nguồn mặc định' : 'Set as default account'}</button>}
     {account.kind === 'legacy' && <Note warning={data.setupComplete && b.balance !== 0}>{data.setupComplete && b.balance !== 0 ? c.setupResidual : c.historicalHelp}</Note>}
     {account.archived && <Note>{c.archivedHelp}{b.balance !== 0 ? ` ${c.archivedNonzero}` : ''}</Note>}
     {account.kind !== 'credit_card' && account.kind !== 'legacy' && b.balance < 0 && <Note warning>{c.balanceWarning}</Note>}
@@ -168,9 +176,13 @@ function AccountDetail({ data, account, go, commit, onAddTransaction, onEditTran
 }
 
 function AccountForm({ initial, commit, busy, onCancel, onSaved }: { initial?: Account; commit: Commit; busy: boolean; onCancel: () => void; onSaved: (id: string) => void }) {
-  const c = useAccountCopy(); const today = localTodayIso();
+  const c = useAccountCopy(); const { locale } = useI18n(); const vi = locale === 'vi'; const today = localTodayIso();
   const [id] = useState(() => initial?.id ?? createId('account')); const [name, setName] = useState(initial?.name ?? '');
   const [kind, setKind] = useState<Account['kind']>(initial?.kind ?? 'bank'); const [currency, setCurrency] = useState<Currency>(initial?.currency ?? 'VND');
+  const [bankId, setBankId] = useState(initial?.bankId ?? '');
+  const [bankCountry, setBankCountry] = useState<BankCountry>(() => (getBank(initial?.bankId ?? '') ?? inferBank(initial?.name ?? ''))?.country ?? (initial?.currency === 'USD' ? 'US' : initial?.currency === 'GBP' ? 'GB' : 'VN'));
+  const bankAccount = kind === 'bank' || kind === 'credit_card';
+  const previewBank = bankId ? getBank(bankId) : inferBank(name);
   const [balance, setBalance] = useState(formatMoneyAmount(initial?.kind === 'credit_card' ? Math.abs(initial.openingBalance) : initial?.openingBalance ?? 0, currency));
   const [owing, setOwing] = useState((initial?.openingBalance ?? 0) <= 0); const [date, setDate] = useState(initial?.openingDate ?? today);
   const [limit, setLimit] = useState(initial?.creditLimit !== undefined ? formatMoneyAmount(initial.creditLimit, currency) : ''); const [error, setError] = useState('');
@@ -180,11 +192,16 @@ function AccountForm({ initial, commit, busy, onCancel, onSaved }: { initial?: A
     if (amount === null || (kind === 'credit_card' && amount < 0) || creditLimit === null || (creditLimit !== undefined && creditLimit < 0)) { setError(c.invalidMoney); return; }
     if (!isValidDateOnly(date) || date > today) { setError(c.invalidDate); return; }
     setError(''); const openingBalance = kind === 'credit_card' && owing ? -amount : amount;
-    void commit((current) => saveAccount(current, { id, name: name.trim(), kind, currency, openingBalance: initial?.openingBalance ?? openingBalance, openingDate: initial?.openingDate ?? date, ...(kind === 'credit_card' && creditLimit !== undefined ? { creditLimit } : {}) }, initial?.id), () => onSaved(id));
+    void commit((current) => saveAccount(current, { id, name: name.trim(), kind, currency, bankId: bankAccount && bankId ? bankId : undefined, openingBalance: initial?.openingBalance ?? openingBalance, openingDate: initial?.openingDate ?? date, ...(kind === 'credit_card' && creditLimit !== undefined ? { creditLimit } : {}) }, initial?.id), () => onSaved(id));
   };
   return <form className="account-form" onSubmit={submit} noValidate>{error && <FormProblem message={error} />}
     <Field label={c.name}><input autoFocus maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder={c.namePlaceholder} /></Field>
     <div className="account-form-grid"><Field label={c.kind}><select value={kind} onChange={(e) => setKind(e.target.value as Account['kind'])} disabled={!!initial}>{(['cash', 'bank', 'ewallet', 'credit_card'] as const).map((value) => <option key={value} value={value}>{c[value]}</option>)}</select></Field><Field label={c.currency}><select value={currency} onChange={(e) => setCurrency(e.target.value as Currency)} disabled={!!initial}>{CURRENCIES.map((value) => <option key={value}>{value}</option>)}</select></Field></div>
+    {bankAccount && <div className="account-bank-fields">
+      <div className="account-form-grid"><Field label={vi ? 'Quốc gia ngân hàng' : 'Bank country'}><select aria-label={vi ? 'Quốc gia ngân hàng' : 'Bank country'} value={bankCountry} onChange={(event) => { setBankCountry(event.target.value as BankCountry); setBankId(''); }}><option value="VN">{vi ? 'Việt Nam' : 'Vietnam'}</option><option value="US">{vi ? 'Mỹ' : 'United States'}</option><option value="GB">{vi ? 'Anh' : 'United Kingdom'}</option></select></Field>
+      <Field label={vi ? 'Icon ứng dụng ngân hàng' : 'Bank app icon'}><select aria-label={vi ? 'Icon ứng dụng ngân hàng' : 'Bank app icon'} value={bankId} onChange={(event) => { const selected = getBank(event.target.value); setBankId(event.target.value); if (selected && (!name.trim() || name === previewBank?.name)) setName(selected.name); }}><option value="">{vi ? 'Tự nhận diện theo tên' : 'Detect from account name'}</option><option value="generic">{vi ? 'Biểu tượng ngân hàng chung' : 'Generic bank icon'}</option>{BANKS.filter((bank) => bank.country === bankCountry).map((bank) => <option value={bank.id} key={bank.id}>{bank.name}</option>)}</select></Field></div>
+      <div className="account-bank-preview"><AccountIcon account={{ kind, name, bankId: bankId || undefined }} size={38} /><span>{previewBank?.name ?? (vi ? 'Biểu tượng ngân hàng chung' : 'Generic bank icon')}<small>{vi ? 'Biểu tượng không thay đổi tiền tệ của nguồn.' : 'The icon does not change the account currency.'}</small></span></div>
+    </div>}
     {initial ? <Note>{c.currencyLocked} {c.adjustmentHelp}</Note> : <>
       {kind === 'credit_card' && <fieldset className="account-content-fieldset"><legend className="account-section-title">{c.cardBalance}</legend><div className="account-selection"><label><input type="radio" name="card-position" checked={owing} onChange={() => setOwing(true)} />{c.owing}</label><label><input type="radio" name="card-position" checked={!owing} onChange={() => setOwing(false)} />{c.overpaid}</label></div></fieldset>}
       <div className="account-form-grid"><Field label={kind === 'credit_card' ? owing ? c.debt : c.credit : c.opening}><AmountInput value={balance} onChange={setBalance} currency={currency} signed={kind !== 'credit_card'} /></Field><Field label={c.openingDate}><input type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} /></Field></div><Note>{c.openingHelp}</Note>
@@ -290,7 +307,7 @@ function SetupForm({ data, commit, busy, onCancel, onSaved }: { data: FinanceDat
   const currencies = [...new Set([...rows.map((row) => row.currency), ...data.accounts.map((account) => account.currency)])].filter((currency) => currency !== 'VND');
   const submit = (e: FormEvent) => { e.preventDefault(); if (!valid) { setError(c.setupMissingName); return; } if (!preview || preview.difference === null) { setError(c.setupRates); return; } setError(''); void commit((current) => setupAccounts(current, inputs, date), onSaved); };
   return <div className="account-form">{error && <FormProblem message={error} />}<Note>{c.setupIntro}</Note><Field label={c.balanceAsOf}><input type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} /></Field>
-    <div>{rows.map((row, index) => <fieldset key={row.id} className="account-setup-row"><div className="account-inline-heading"><h3><SourceIcon kind={row.kind} size={19} />{row.name.trim() || `${c.title} ${index + 1}`}</h3><button className="account-icon-button account-danger" type="button" aria-label={`${c.removeRow} ${index + 1}`} onClick={() => setRows((current) => current.filter((item) => item.id !== row.id))} disabled={rows.length === 1}><Trash size={18} aria-hidden="true" /></button></div>
+    <div>{rows.map((row, index) => <fieldset key={row.id} className="account-setup-row"><div className="account-inline-heading"><h3><AccountIcon account={row} size={24} />{row.name.trim() || `${c.title} ${index + 1}`}</h3><button className="account-icon-button account-danger" type="button" aria-label={`${c.removeRow} ${index + 1}`} onClick={() => setRows((current) => current.filter((item) => item.id !== row.id))} disabled={rows.length === 1}><Trash size={18} aria-hidden="true" /></button></div>
       <Field label={c.name}><input value={row.name} maxLength={60} onChange={(e) => update(row.id, { name: e.target.value })} placeholder={c.namePlaceholder} /></Field><div className="account-form-grid"><Field label={c.kind}><select value={row.kind} onChange={(e) => update(row.id, { kind: e.target.value as SetupDraft['kind'] })}>{(['cash', 'bank', 'ewallet', 'credit_card'] as const).map((kind) => <option key={kind} value={kind}>{c[kind]}</option>)}</select></Field><Field label={c.currency}><select value={row.currency} onChange={(e) => update(row.id, { currency: e.target.value as Currency })}>{CURRENCIES.map((currency) => <option key={currency}>{currency}</option>)}</select></Field></div>
       {row.kind === 'credit_card' && <div className="account-selection"><label><input type="radio" name={`setup-position-${row.id}`} checked={row.owing} onChange={() => update(row.id, { owing: true })} />{c.owing}</label><label><input type="radio" name={`setup-position-${row.id}`} checked={!row.owing} onChange={() => update(row.id, { owing: false })} />{c.overpaid}</label></div>}
       <Field label={row.kind === 'credit_card' ? row.owing ? c.debt : c.credit : c.balance}><AmountInput value={row.balance} onChange={(balance) => update(row.id, { balance })} currency={row.currency} signed={row.kind !== 'credit_card'} /></Field>{row.kind === 'credit_card' && <Field label={c.limit} hint={c.limitHelp}><AmountInput value={row.limit} onChange={(limit) => update(row.id, { limit })} currency={row.currency} /></Field>}

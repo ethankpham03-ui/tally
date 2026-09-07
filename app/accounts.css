@@ -8,12 +8,29 @@
 .account-source-row:hover .account-source-copy strong { color: var(--accent-strong); }
 .account-source-icon { flex-shrink: 0; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent-strong); }
 .account-source-icon.is-card { background: var(--surface-inset); color: var(--ink); }
+.account-source-icon:has(.account-bank-logo) { background: transparent; }
+.account-source-icon .account-bank-logo { width: 100%; height: 100%; }
 .account-source-copy { flex: 1; min-width: 0; }
 .account-source-copy strong, .account-source-value strong { display: block; font-size: var(--type-control-size); overflow-wrap: anywhere; }
 .account-source-copy small, .account-source-value small { display: block; margin-top: 4px; font-size: var(--type-meta-size); color: var(--muted); }
 .account-source-value { max-width: 50%; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .account-source-value strong { font-family: var(--font-numeric); }
 .account-source-value .account-missing-rate { color: var(--warning); }
+.account-sortable-row { display: flex; align-items: center; min-width: 0; border-bottom: 1px solid var(--line); }
+.account-sortable-row .account-source-row { flex: 1; border-bottom: 0; }
+.account-sortable-row.is-dragging { background: var(--accent-soft); border-radius: 10px; outline: 2px solid var(--accent); outline-offset: -2px; }
+.account-drag-handle { display: grid; place-items: center; flex: 0 0 44px; min-width: 44px; min-height: 48px; padding: 0; border: 0; border-radius: 10px; color: var(--muted); background: transparent; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.account-drag-handle:hover { color: var(--accent-strong); background: var(--surface-inset); }
+.account-drag-handle:active { cursor: grabbing; }
+.account-drag-handle:disabled { cursor: wait; opacity: .5; }
+.account-reorder-hint { margin: 0 0 8px; color: var(--muted); font-size: var(--type-meta-size); line-height: 1.5; }
+.account-source-copy .account-default-label { color: var(--accent-strong); }
+.account-default-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; align-self: flex-start; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 10px; background: var(--accent-soft); color: var(--accent-strong); font-size: var(--type-label-size); }
+.account-default-action:disabled { opacity: 1; cursor: default; }
+.account-bank-fields { display: grid; gap: 14px; min-width: 0; }
+.account-bank-preview { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.account-bank-preview > span { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-control-size); }
+.account-bank-preview small { display: block; color: var(--muted); font-size: var(--type-meta-size); margin-top: 4px; }
 .accounts-setup-entry { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; padding: 16px; border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent-strong); text-align: left; }
 .accounts-setup-entry strong, .accounts-setup-entry small { display: block; }
 .accounts-setup-entry strong { font-size: var(--type-control-size); }
