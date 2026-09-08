@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { formatShortDate } from './date-display';
 
 export const APP_NAME = 'Tally' as const;
 export const DEFAULT_LOCALE = 'en' as const;
@@ -1134,7 +1135,6 @@ export function I18nProvider({
   }, [localeTag]);
 
   const dateTools = useMemo(() => ({
-    short: new Intl.DateTimeFormat(localeTag, { day: '2-digit', month: '2-digit' }),
     monthYear: new Intl.DateTimeFormat(localeTag, { month: 'long', year: 'numeric' }),
   }), [localeTag]);
 
@@ -1166,7 +1166,7 @@ export function I18nProvider({
     formatNumber: (number, options) => new Intl.NumberFormat(localeTag, options).format(number),
     formatPercent: (ratio) => numberTools.percent.format(ratio),
     formatCompactNumber: (number) => numberTools.compact.format(number),
-    formatDate: (date) => dateTools.short.format(normalizeDate(date)),
+    formatDate: formatShortDate,
     formatMonthYear: (date) => dateTools.monthYear.format(normalizeDate(date)),
   }), [catalog, dateTools, isLocaleHydrated, locale, localeTag, numberTools, plural, setLocale, t]);
 

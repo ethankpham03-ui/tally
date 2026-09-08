@@ -13,7 +13,8 @@ export function financeError(error: unknown, locale: Locale): string {
   if (/same-currency|different accounts|transfer/.test(text)) return 'Chọn hai nguồn khác nhau. Chuyển cùng tiền tệ cần số gửi bằng số nhận; hãy sửa cả lần chuyển và phí cùng nhau.';
   if (/statement|minimum/.test(text)) return 'Kiểm tra kỳ sao kê, nguồn thẻ, hạn thanh toán và số tiền. Khoản trả cần thuộc đúng thẻ của kỳ sao kê.';
   if (/currency|exchange|rate|decimal|minor|amount|integer|money|overflow/.test(text)) return 'Kiểm tra số tiền và tỷ giá: dùng số hợp lệ, đúng số chữ số thập phân của tiền tệ và trong giới hạn cho phép.';
-  if (/date|posted/.test(text)) return 'Chọn ngày giao dịch hợp lệ, không sau hôm nay và không trước mốc số dư mở đầu.';
+  if (/posted/.test(text)) return 'Chọn ngày đã phát sinh hợp lệ, không sau hôm nay.';
+  if (/date/.test(text)) return 'Chọn ngày giao dịch hợp lệ.';
   if (/account|source/.test(text)) return 'Chọn nguồn tiền hợp lệ. Nguồn đang có giao dịch hoặc khoản định kỳ cần được xử lý trước khi xóa.';
   if (/payment|subscription|occurrence/.test(text)) return 'Kỳ thanh toán đã thay đổi hoặc liên kết chưa hợp lệ. Kiểm tra lịch sử và chọn lại kỳ cần ghi nhận.';
   if (/category/.test(text)) return 'Chọn danh mục hợp lệ cho giao dịch hoặc ngân sách.';

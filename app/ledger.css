@@ -39,6 +39,28 @@
 .cashflow-mode button[aria-pressed="true"] { color: var(--accent-strong); background: var(--accent-soft); }
 .subscription-account-label { display: block; color: var(--muted); font-size: var(--type-meta-size); margin-top: 5px; }
 .budget-conversion-note { margin: 12px 0 0; color: var(--warning); font-size: var(--type-label-size); }
+.ledger-filter-note { margin: 0 0 24px; color: var(--muted); font-size: var(--type-meta-size); line-height: var(--type-line-body); }
+.ledger-list.is-grouped { margin-top: 0; }
+.ledger-day { min-width: 0; }
+.ledger-day + .ledger-day { margin-top: 26px; padding-top: 24px; border-top: 1px solid var(--line); }
+.ledger-day-header { display: grid; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.ledger-day-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; }
+.ledger-day-heading h3 { margin: 0; color: var(--ink); font-size: var(--type-group-heading-size); line-height: var(--type-line-heading); }
+.ledger-day-heading > span { color: var(--muted); font-size: var(--type-meta-size); white-space: nowrap; }
+.ledger-day-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0; max-width: 520px; }
+.ledger-day-totals > div { min-width: 0; }
+.ledger-day-totals dt { color: var(--muted); font-size: var(--type-meta-size); line-height: var(--type-line-label); }
+.ledger-day-totals dd { margin: 3px 0 0; color: var(--ink); font-family: var(--font-numeric); font-size: var(--type-label-size); font-weight: var(--type-weight-heading); line-height: var(--type-line-label); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ledger-day-totals dd.is-income { color: var(--positive); }
+.ledger-day-totals dd.is-expense { color: var(--negative); }
+.ledger-day-note { margin: 0; color: var(--muted); font-size: var(--type-meta-size); line-height: var(--type-line-label); }
+.ledger-day-note.is-warning { color: var(--warning); }
+.full-view > .ledger-list.is-grouped .ledger-row { grid-template-columns: 40px minmax(0, 1fr) minmax(100px, 170px) 136px; gap: 14px; padding-block: 12px; }
+.full-view > .ledger-list.is-grouped .ledger-row .transaction-copy { min-width: 0; }
+.full-view > .ledger-list.is-grouped .ledger-row .ledger-row-amount { grid-column: 3; grid-row: 1; }
+.full-view > .ledger-list.is-grouped .ledger-row .ledger-row-amount > * { grid-column: 1; }
+.full-view > .ledger-list.is-grouped .ledger-row .row-actions { grid-column: 4; grid-row: 1; }
+.full-view > .ledger-list.is-grouped .ledger-row .row-action { width: 44px; height: 44px; min-width: 44px; }
 @media (max-width: 900px) {
   .full-view > .ledger-list .ledger-row > time { display: block; grid-column: 2; grid-row: 2; }
 }
@@ -48,6 +70,10 @@
   .ledger-toolbar-actions button { flex: 1; }
   .financial-position { gap: 14px; }
   .financial-position strong { font-size: 21.06px; }
+  .full-view > .ledger-list.is-grouped .ledger-row { grid-template-columns: 38px minmax(0, 1fr) minmax(86px, .85fr); grid-template-rows: auto 44px; gap: 6px 10px; min-height: 104px; padding-block: 12px 8px; }
+  .full-view > .ledger-list.is-grouped .ledger-row .transaction-icon { grid-column: 1; grid-row: 1; }
+  .full-view > .ledger-list.is-grouped .ledger-row .transaction-copy { grid-column: 2; grid-row: 1; }
+  .full-view > .ledger-list.is-grouped .ledger-row .row-actions { grid-column: 2 / 4; grid-row: 2; }
 }
 @media (max-width: 430px) {
   .ledger-row { grid-template-columns: 36px minmax(0,1fr) minmax(86px,.8fr); }
@@ -55,4 +81,11 @@
   .ledger-row > time { grid-column: 2; grid-row: 2; }
   .full-view > .ledger-list .ledger-row .row-actions { grid-column: 3; grid-row: 2; }
   .ledger-row-amount .transaction-amount { font-size: 15.21px; }
+}
+@media (max-width: 370px) {
+  .full-view > .ledger-list.is-grouped .ledger-row { grid-template-columns: 36px minmax(0, 1fr); grid-template-rows: auto auto 44px; }
+  .full-view > .ledger-list.is-grouped .ledger-row .transaction-copy { grid-column: 2; }
+  .full-view > .ledger-list.is-grouped .ledger-row .ledger-row-amount { grid-column: 2; grid-row: 2; text-align: left; }
+  .full-view > .ledger-list.is-grouped .ledger-row .transaction-amount { text-align: left; }
+  .full-view > .ledger-list.is-grouped .ledger-row .row-actions { grid-column: 2; grid-row: 3; }
 }

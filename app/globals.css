@@ -1485,9 +1485,11 @@ select {
 
 .field input,
 .field select { padding: 0 14px; }
-/* Safari's native date value must shrink within the form grid on iPhone. */
+/* Give Safari's native value an explicit centered line box, including on iPhone. */
 .field input[type='date'] {
-  display: block;
+  display: flex;
+  align-items: center;
+  height: 50px;
   min-width: 0;
   min-inline-size: 0;
   width: 100%;
@@ -1498,12 +1500,19 @@ select {
   -webkit-appearance: none;
   appearance: none;
   text-align: start;
+  line-height: var(--type-line-label);
 }
 .field input[type='date']::-webkit-date-and-time-value {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
   min-inline-size: 0;
+  margin: 0;
   text-align: start;
 }
 .field input[type='date']::-webkit-datetime-edit {
+  display: inline-flex;
+  align-items: center;
   min-inline-size: 0;
   padding: 0;
 }
@@ -1628,8 +1637,9 @@ select {
 .custom-icon-picker > div { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 7px; }
 .custom-icon-picker button { min-width: 0; aspect-ratio: 1; display: grid; place-items: center; border: 0; border-radius: 10px; color: var(--muted); background: var(--surface-solid); }
 .custom-icon-picker button.is-selected { color: var(--on-accent); background: var(--accent-gradient); box-shadow: var(--shadow-accent-small); }
-.custom-category-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 10px; }
-.custom-category-actions button { min-height: 48px; }
+.custom-category-actions { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; }
+.custom-category-actions button { min-width: 0; min-height: 48px; }
+.custom-category-actions .custom-category-back { width: 48px; height: 48px; padding: 0; display: grid; place-items: center; }
 .field-error { color: var(--negative); font-size: var(--type-meta-size); font-weight: var(--type-weight-medium); }
 .split-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .info-callout { display: grid; grid-template-columns: 24px 1fr; gap: 10px; padding: 13px; border-radius: 11px; color: var(--muted); background: var(--accent-soft); font-size: var(--type-meta-size); line-height: var(--type-line-body); }
@@ -1988,6 +1998,7 @@ select {
   .sheet-header p { font-size: var(--type-label-size); }
   .form-sheet > form { min-height: 0; overflow-y: auto; padding: 7px 7px 12px; }
   .field input, .field select, .money-input, .search-field input { min-height: 52px; font-size: var(--type-input-size); }
+  .field input[type='date'] { height: 52px; }
   .split-fields { grid-template-columns: 1fr; }
   .sheet-actions { position: static; margin: auto 0 0; padding-top: 10px; background: var(--surface); }
   .sheet-actions button { min-height: 50px; }

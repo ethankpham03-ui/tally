@@ -1,5 +1,8 @@
 'use client';
 
+import { MoneyInput } from './money-input';
+import { DateInput } from './date-input';
+
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, Bank, Check, CreditCard, DeviceMobile, DownloadSimple, Plus, ShieldCheck, Trash, Wallet } from '@phosphor-icons/react';
 import { useI18n } from './i18n';
@@ -22,9 +25,9 @@ const en = {
   cash: 'Cash', bank: 'Bank account', ewallet: 'E-wallet', credit_card: 'Credit card', account: 'Account',
   balance: 'Starting balance', owing: 'Amount owed', cardPosition: 'Card position', cardOwing: 'I owe the card', cardCredit: 'The card has a credit balance',
   creditBalance: 'Credit balance', limit: 'Credit limit (optional)', limitHelp: 'A credit limit is not money you own.',
-  moneyHelp: 'No thousands separators; use a dot for decimals.', bankHelp: 'Use a minus sign if your bank balance is negative.',
+  moneyHelp: 'Thousands separators are added automatically; use a comma for decimals.', bankHelp: 'Use a minus sign if your bank balance is negative.',
   add: 'Add another account', remove: 'Remove account', save: 'Start using Tally', saving: 'Saving…',
-  invalidName: 'Give this account a name (up to 60 characters).', invalidAmount: 'Enter a valid amount without thousands separators.',
+  invalidName: 'Give this account a name (up to 60 characters).', invalidAmount: 'Enter a valid amount.',
   nonnegative: 'Enter zero or a positive amount.', decimals: 'This currency does not use decimal places.',
   twoDecimals: 'Use no more than two decimal places.', invalidDate: 'Choose a valid date no later than today.',
   fixErrors: 'Check the highlighted fields before continuing.', preview: 'Your starting point', previewHelp: 'These are the balances you entered.',
@@ -46,9 +49,9 @@ const vi: Copy = {
   cash: 'Tiền mặt', bank: 'Tài khoản ngân hàng', ewallet: 'Ví điện tử', credit_card: 'Thẻ tín dụng', account: 'Nguồn tiền',
   balance: 'Số dư mở đầu', owing: 'Dư nợ hiện tại', cardPosition: 'Tình trạng thẻ', cardOwing: 'Tôi đang nợ thẻ', cardCredit: 'Thẻ đang có số dư có',
   creditBalance: 'Số dư có', limit: 'Hạn mức thẻ (tùy chọn)', limitHelp: 'Hạn mức thẻ không phải tiền bạn đang có.',
-  moneyHelp: 'Không dùng dấu phân nhóm; dùng dấu chấm cho phần thập phân.', bankHelp: 'Dùng dấu trừ nếu số dư ngân hàng đang âm.',
+  moneyHelp: 'Dấu phân cách hàng nghìn được thêm tự động; dùng dấu phẩy cho phần thập phân.', bankHelp: 'Dùng dấu trừ nếu số dư ngân hàng đang âm.',
   add: 'Thêm nguồn khác', remove: 'Bỏ nguồn tiền', save: 'Bắt đầu dùng Tally', saving: 'Đang lưu…',
-  invalidName: 'Đặt tên cho nguồn tiền (tối đa 60 ký tự).', invalidAmount: 'Nhập số tiền hợp lệ, không có dấu phân nhóm.',
+  invalidName: 'Đặt tên cho nguồn tiền (tối đa 60 ký tự).', invalidAmount: 'Nhập số tiền hợp lệ.',
   nonnegative: 'Nhập số 0 hoặc số tiền dương.', decimals: 'Tiền tệ này không dùng phần thập phân.',
   twoDecimals: 'Dùng tối đa hai chữ số thập phân.', invalidDate: 'Chọn ngày hợp lệ không sau hôm nay.',
   fixErrors: 'Kiểm tra các ô được đánh dấu trước khi tiếp tục.', preview: 'Điểm bắt đầu của bạn', previewHelp: 'Số dư từ các nguồn bạn vừa nhập.',
@@ -177,7 +180,7 @@ export function OnboardingFlow({ onComplete, onSkip, onImport }: OnboardingFlowP
       <div className="onboarding-setup-grid">
         <form ref={formRef} onSubmit={submit} noValidate className="onboarding-form">
           <fieldset disabled={busy} className="onboarding-fields">
-            <div className="onboarding-date-row"><label className="field" htmlFor={`${id}-date`}>{c.date}<input id={`${id}-date`} name="date" type="date" value={date} max={localTodayIso()} aria-invalid={!!errors.date} aria-describedby={`${id}-date-help${errors.date ? ` ${id}-date-error` : ''}`} onChange={(event) => { setDate(event.target.value); setErrors((current) => { const next = { ...current }; delete next.date; return next; }); setError(''); }} required />{errors.date && <span className="onboarding-field-error" id={`${id}-date-error`}>{errors.date}</span>}</label><p id={`${id}-date-help`} className="onboarding-field-help">{c.dateHelp}</p></div>
+            <div className="onboarding-date-row"><label className="field" htmlFor={`${id}-date`}>{c.date}<DateInput id={`${id}-date`} name="date" value={date} max={localTodayIso()} aria-invalid={!!errors.date} aria-describedby={`${id}-date-help${errors.date ? ` ${id}-date-error` : ''}`} required onValueChange={(value) => { setDate(value); setErrors((current) => { const next = { ...current }; delete next.date; return next; }); setError(''); }} />{errors.date && <span className="onboarding-field-error" id={`${id}-date-error`}>{errors.date}</span>}</label><p id={`${id}-date-help`} className="onboarding-field-help">{c.dateHelp}</p></div>
             <div className="onboarding-source-list">{rows.map((row, index) => {
               const fieldId = `${id}-${row.id}`;
               const balanceLabel = row.kind === 'credit_card' ? row.cardCredit ? c.creditBalance : c.owing : c.balance;
@@ -187,8 +190,8 @@ export function OnboardingFlow({ onComplete, onSkip, onImport }: OnboardingFlowP
                   <label className="field" htmlFor={`${fieldId}-name`}>{c.name}<input id={`${fieldId}-name`} name={`${row.id}-name`} value={nameFor(row)} maxLength={60} placeholder={c.namePlaceholder} autoComplete="off" aria-invalid={!!errors[`${row.id}-name`]} aria-describedby={errors[`${row.id}-name`] ? `${fieldId}-name-error` : undefined} onChange={(event) => updateRow(row.id, { name: event.target.value, defaultName: false })} required />{errors[`${row.id}-name`] && <span className="onboarding-field-error" id={`${fieldId}-name-error`}>{errors[`${row.id}-name`]}</span>}</label>
                   <label className="field" htmlFor={`${fieldId}-kind`}>{c.kind}<select id={`${fieldId}-kind`} value={row.kind} onChange={(event) => updateRow(row.id, { kind: event.target.value as SourceKind })}>{(['cash', 'bank', 'ewallet', 'credit_card'] as const).map((kind) => <option value={kind} key={kind}>{c[kind]}</option>)}</select></label>
                   <label className="field" htmlFor={`${fieldId}-currency`}>{c.currency}<select id={`${fieldId}-currency`} value={row.currency} onChange={(event) => updateRow(row.id, { currency: event.target.value as Currency })}>{CURRENCIES.map((currency) => <option key={currency} value={currency}>{currency}</option>)}</select></label>
-                  <label className="field" htmlFor={`${fieldId}-balance`}>{balanceLabel}<span className={`onboarding-money-input${errors[`${row.id}-balance`] ? ' is-invalid' : ''}`}><input id={`${fieldId}-balance`} name={`${row.id}-balance`} value={row.balance} inputMode="decimal" autoComplete="off" aria-invalid={!!errors[`${row.id}-balance`]} aria-describedby={`${fieldId}-money-help${errors[`${row.id}-balance`] ? ` ${fieldId}-balance-error` : ''}`} onChange={(event) => updateRow(row.id, { balance: event.target.value })} required /><span aria-hidden="true">{row.currency}</span></span>{errors[`${row.id}-balance`] && <span className="onboarding-field-error" id={`${fieldId}-balance-error`}>{errors[`${row.id}-balance`]}</span>}</label>
-                  {row.kind === 'credit_card' && <><label className="field" htmlFor={`${fieldId}-card-position`}>{c.cardPosition}<select id={`${fieldId}-card-position`} value={row.cardCredit ? 'credit' : 'owing'} onChange={(event) => updateRow(row.id, { cardCredit: event.target.value === 'credit' })}><option value="owing">{c.cardOwing}</option><option value="credit">{c.cardCredit}</option></select></label><label className="field" htmlFor={`${fieldId}-limit`}>{c.limit}<input id={`${fieldId}-limit`} name={`${row.id}-limit`} value={row.limit} inputMode="decimal" autoComplete="off" aria-invalid={!!errors[`${row.id}-limit`]} aria-describedby={`${fieldId}-limit-help${errors[`${row.id}-limit`] ? ` ${fieldId}-limit-error` : ''}`} onChange={(event) => updateRow(row.id, { limit: event.target.value })} />{errors[`${row.id}-limit`] && <span className="onboarding-field-error" id={`${fieldId}-limit-error`}>{errors[`${row.id}-limit`]}</span>}</label></>}
+                  <label className="field" htmlFor={`${fieldId}-balance`}>{balanceLabel}<span className={`onboarding-money-input${errors[`${row.id}-balance`] ? ' is-invalid' : ''}`}><MoneyInput id={`${fieldId}-balance`} name={`${row.id}-balance`} value={row.balance} autoComplete="off" aria-invalid={!!errors[`${row.id}-balance`]} aria-describedby={`${fieldId}-money-help${errors[`${row.id}-balance`] ? ` ${fieldId}-balance-error` : ''}`} required currency={row.currency} signed={row.kind !== 'credit_card'} onValueChange={(value) => updateRow(row.id, { balance: value })} /><span aria-hidden="true">{row.currency}</span></span>{errors[`${row.id}-balance`] && <span className="onboarding-field-error" id={`${fieldId}-balance-error`}>{errors[`${row.id}-balance`]}</span>}</label>
+                  {row.kind === 'credit_card' && <><label className="field" htmlFor={`${fieldId}-card-position`}>{c.cardPosition}<select id={`${fieldId}-card-position`} value={row.cardCredit ? 'credit' : 'owing'} onChange={(event) => updateRow(row.id, { cardCredit: event.target.value === 'credit' })}><option value="owing">{c.cardOwing}</option><option value="credit">{c.cardCredit}</option></select></label><label className="field" htmlFor={`${fieldId}-limit`}>{c.limit}<MoneyInput id={`${fieldId}-limit`} name={`${row.id}-limit`} value={row.limit} autoComplete="off" aria-invalid={!!errors[`${row.id}-limit`]} aria-describedby={`${fieldId}-limit-help${errors[`${row.id}-limit`] ? ` ${fieldId}-limit-error` : ''}`} currency={row.currency} onValueChange={(value) => updateRow(row.id, { limit: value })} />{errors[`${row.id}-limit`] && <span className="onboarding-field-error" id={`${fieldId}-limit-error`}>{errors[`${row.id}-limit`]}</span>}</label></>}
                 </div>
                 <p className="onboarding-field-help" id={`${fieldId}-money-help`}>{c.moneyHelp}{row.kind === 'bank' ? ` ${c.bankHelp}` : ''}</p>
                 {row.kind === 'credit_card' && <p className="onboarding-field-help" id={`${fieldId}-limit-help`}>{c.limitHelp}</p>}

@@ -123,8 +123,8 @@ export function accountEffects(transaction: Transaction): Array<{ accountId: str
     : [{ accountId: transaction.accountId, amount: transaction.amount }];
 }
 function nativeBalance(data: FinanceData, account: Account, asOf: string): number {
-  if (account.openingDate && account.openingDate > asOf) return 0;
-  return sumMoney([account.openingBalance, ...data.transactions.filter((transaction) => transaction.date <= asOf)
+  const openingBalance = account.openingDate && account.openingDate > asOf ? 0 : account.openingBalance;
+  return sumMoney([openingBalance, ...data.transactions.filter((transaction) => transaction.date <= asOf)
     .flatMap(accountEffects).filter((effect) => effect.accountId === account.id).map((effect) => effect.amount)]);
 }
 export function latestExchangeRate(data: Pick<FinanceData, 'exchangeRates'>, currency: Currency, asOf = dateFor()): ExchangeRate | undefined {
@@ -150,6 +150,10 @@ export function deriveAccountBalances(data: FinanceData, reference = new Date())
 }
 
 function isReportable(transaction: Transaction) { return transaction.kind === 'income' || transaction.kind === 'expense' || transaction.kind === 'refund'; }
+function isOrdinaryLedgerTransaction(transaction: Pick<Transaction, 'kind' | 'subscriptionPaymentId' | 'groupId' | 'systemTitle'>) {
+  return ['income', 'expense', 'refund'].includes(transaction.kind)
+    && !transaction.subscriptionPaymentId && !transaction.groupId && !transaction.systemTitle;
+}
 function reportTotals(transactions: readonly Transaction[]) {
   const income: number[] = [], expense: number[] = [];
   let missing = 0;
@@ -236,12 +240,14 @@ export function deriveLiquiditySeries(data: FinanceData, period: legacy.Cashflow
 }
 export function deriveAccountReport(data: FinanceData, accountId: string, startDate?: string, endDate = dateFor()) {
   const account = requireAccount(data, accountId, true);
-  const start = startDate ?? account.openingDate ?? '0100-01-01';
+  const historyStart = data.transactions.filter((transaction) => accountEffects(transaction).some((effect) => effect.accountId === accountId))
+    .reduce((earliest, transaction) => transaction.date < earliest ? transaction.date : earliest, account.openingDate ?? '0100-01-01');
+  const start = startDate ?? historyStart;
   if (!legacy.isValidDateOnly(start) || !legacy.isValidDateOnly(endDate) || start > endDate) throw new Error('Invalid report period');
   const transactions = data.transactions.filter((transaction) => transaction.date >= start && transaction.date <= endDate
     && accountEffects(transaction).some((effect) => effect.accountId === accountId)).sort((a, b) => b.date.localeCompare(a.date));
-  // An account's baseline precedes its first day's transactions. If the report
-  // starts earlier, disclose the later opening separately from reconciliation.
+  // Keep the baseline on its original date even when transactions predate it.
+  // Reports starting earlier disclose that opening separately from reconciliation.
   const openingBalance = sumMoney([
     nativeBalance(data, account, legacy.addDaysDateOnly(start, -1)),
     account.openingDate === start ? account.openingBalance : 0,
@@ -390,7 +396,7 @@ export function validateFinanceData(value: unknown): FinanceDataValidationResult
     if ((transaction.kind === 'expense' || transaction.kind === 'transfer') && transaction.amount >= 0) issues.push(`${path}.amount must be negative`);
     if (transaction.kind === 'income' ? transaction.category !== 'income' : !legacy.isExpenseCategoryId(transaction.category)) issues.push(`${path}.category is invalid for its kind`);
     if (legacy.isCustomExpenseCategoryId(transaction.category) && !categories.has(transaction.category)) issues.push(`${path}.category references a missing custom category`);
-    if (account?.openingDate && transaction.date < account.openingDate) issues.push(`${path}.date is before the account opening date`);
+    if (account?.openingDate && transaction.date < account.openingDate && !isOrdinaryLedgerTransaction(transaction)) issues.push(`${path}.date is before the account opening date`);
     if (transaction.reportingAmount !== undefined && (!isMoney(transaction.reportingAmount) || (transaction.reportingAmount !== 0 && Math.sign(transaction.reportingAmount) !== Math.sign(transaction.amount)))) issues.push(`${path}.reportingAmount is invalid`);
     if (account?.currency === 'VND' && transaction.reportingAmount !== transaction.amount) issues.push(`${path}.reportingAmount must equal VND amount`);
     if (transaction.reportingRate !== undefined) {
@@ -556,9 +562,11 @@ export function createDemoData(reference = new Date()): FinanceData {
 function checkPostedDate(date: string) {
   if (!legacy.isValidDateOnly(date) || date > dateFor()) throw new Error('Use a valid posted date no later than today');
 }
-function capturedTransaction(data: FinanceData, input: TransactionInput, existingId?: string): Transaction {
+function capturedTransaction(data: FinanceData, input: TransactionInput, existingId?: string, allowFuture = false): Transaction {
   const account = requireAccount(data, input.accountId, !!existingId);
-  checkPostedDate(input.date);
+  if (allowFuture) {
+    if (!legacy.isValidDateOnly(input.date)) throw new Error('Use a valid transaction date');
+  } else checkPostedDate(input.date);
   requireMoney(input.amount);
   let reportingAmount = input.reportingAmount;
   let reportingRate = input.reportingRate;
@@ -581,7 +589,8 @@ export function saveLedgerTransaction(data: FinanceData, input: TransactionInput
   if (existing?.kind === 'transfer') throw new Error('Use the transfer action');
   if (existing?.subscriptionPaymentId && input.kind !== 'expense') throw new Error('A subscription payment must remain an expense');
   if (existing && existing.accountId !== input.accountId && requireAccount(data, existing.accountId, true).kind === 'legacy') throw new Error('Historical source reassignment requires a balance reconciliation');
-  const transaction = capturedTransaction(data, { ...input, ...(existing?.subscriptionPaymentId ? { subscriptionPaymentId: existing.subscriptionPaymentId } : {}) }, existingId);
+  const flexibleDate = isOrdinaryLedgerTransaction(input) && !existing?.subscriptionPaymentId && !existing?.systemTitle;
+  const transaction = capturedTransaction(data, { ...input, ...(existing?.subscriptionPaymentId ? { subscriptionPaymentId: existing.subscriptionPaymentId } : {}) }, existingId, flexibleDate);
   if (existing && existing.accountId === input.accountId && existing.amount === input.amount && existing.date === input.date
     && input.reportingAmount === undefined && input.reportingRate === undefined) {
     if (existing.reportingAmount === undefined) delete transaction.reportingAmount;
@@ -591,6 +600,7 @@ export function saveLedgerTransaction(data: FinanceData, input: TransactionInput
   }
   const payments = data.subscriptionPayments.map((payment) => payment.transactionId === transaction.id
     ? { ...payment, amount: -transaction.amount, paidOn: transaction.date, accountId: transaction.accountId, currency: requireAccount(data, transaction.accountId, true).currency } : payment);
+  // Backdated flows retain their own dates; an existing baseline stays anchored.
   return commit(data, { transactions: existing ? data.transactions.map((item) => item.id === existing.id ? transaction : item) : [...data.transactions, transaction], subscriptionPayments: payments });
 }
 export function saveTransfer(data: FinanceData, input: TransferInput, existingId?: string): FinanceData {

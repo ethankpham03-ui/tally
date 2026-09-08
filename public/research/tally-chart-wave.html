@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Tally — Bản thảo biểu đồ · Số liệu minh họa</title>
+<style>
+@font-face{font-family:"PF Beau Sans";src:url('../fonts/pf-beau-sans-regular.woff2');font-weight:400;font-display:swap}
+@font-face{font-family:"PF Beau Sans";src:url('../fonts/pf-beau-sans-bold.woff2');font-weight:700;font-display:swap}
+@font-face{font-family:CookieRun;src:url('../fonts/cookie-run-regular.woff2');font-weight:400;font-display:swap}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;min-height:100svh;background:#10161e;color:#f3f5f4;font-family:"PF Beau Sans",sans-serif;display:grid;place-items:center;padding:28px 20px}
+main{width:min(100%,760px);min-width:0}
+.cashflow{--income:#80e4c0;--expense:#f1b2c0;--muted:#b9c2ca;background:linear-gradient(145deg,#192a32 0%,#191f30 58%,#261e30 100%);border-radius:18px;box-shadow:10px 15px 36px #0003;overflow:hidden}
+.chart-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 22px 0}
+h1{margin:0;font:400 18px/1.35 CookieRun,"PF Beau Sans",sans-serif}
+.unit{font-size:10.8px;color:var(--muted)}
+.series-labels{display:flex;justify-content:space-between;align-items:center;padding:9px 22px 0;font-size:10.8px}
+.series-labels span{display:flex;align-items:center;gap:6px}
+.series-labels svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.income-label{color:var(--income)}.expense-label{color:var(--expense)}
+.timeline{width:100%;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain;position:relative;touch-action:pan-x pan-y;outline-offset:-3px}
+.timeline::-webkit-scrollbar{display:none}
+.timeline:focus-visible{outline:2px solid #80e4c0}
+.plot{height:242px;position:relative;min-width:100%}
+.drawing{position:absolute;inset:0;height:242px;display:block;overflow:hidden}
+.axis{stroke:#a8b9c9;stroke-opacity:.25;stroke-width:.8}
+.trace{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.trace.in{stroke:var(--income)}.trace.out{stroke:var(--expense)}
+.dot{stroke:#1a2331;stroke-width:2}
+.dot.in{fill:var(--income)}.dot.out{fill:var(--expense)}
+.dot.planned{fill:#1b2432;stroke-width:1.5}
+.dot.planned.in{stroke:var(--income)}.dot.planned.out{stroke:var(--expense)}
+.days{position:absolute;inset:0;list-style:none;margin:0;padding:0}
+.day{position:absolute;top:0;width:68px;height:242px;text-align:center;font-variant-numeric:tabular-nums}
+.value{position:absolute;left:0;right:0;font-size:11.2px;line-height:15px;font-weight:700;white-space:nowrap}
+.value.in{color:var(--income)}.value.out{color:var(--expense)}
+.day-date{position:absolute;top:210px;left:0;right:0;font-size:11.2px;line-height:15px;color:#d4dce2}
+.today{display:block;font-size:9.4px;line-height:12px;color:var(--muted);font-weight:400}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+::selection{background:#245a54;color:#fff}
+@media(max-width:600px){body{padding:20px 12px;align-items:start}.cashflow{border-radius:16px}.chart-head{padding:17px 16px 0}h1{font-size:16.8px}.series-labels{padding:8px 16px 0}.plot,.drawing,.day{height:242px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main>
+<section class="cashflow" aria-labelledby="chart-title" aria-describedby="draft-description">
+<header class="chart-head"><h1 id="chart-title">Thu nhập và chi tiêu</h1><span class="unit">VND</span></header>
+<div class="series-labels"><span class="income-label"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M4 7l4-4 4 4"/></svg>Thu nhập</span><span class="expense-label"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10m-4-4 4 4 4-4"/></svg>Chi tiêu</span></div>
+<p class="sr-only" id="draft-description">Bản thảo với số liệu minh họa. 31 ngày từ 24 tháng 8 đến 23 tháng 9 năm 2026. Thu nhập ở trên, chi tiêu ở dưới cùng một mốc không; cả hai là số tiền dương. Điểm tròn là số tiền từng ngày; đường nối chỉ hướng dẫn mắt. Ngày chưa có dữ liệu ở tương lai hiển thị dấu gạch ngang.</p>
+<div class="timeline" id="timeline" role="region" tabindex="0" aria-label="Biểu đồ thu chi theo ngày. Cuộn ngang để xem 31 ngày."><div class="plot" id="plot"><svg class="drawing" id="drawing" aria-hidden="true"></svg><ol class="days" id="days"></ol></div></div>
+</section>
+</main>
+<script>
+(()=>{
+'use strict';
+const dayWidth=68, baseline=106, amplitude=69;
+const money=new Intl.NumberFormat('vi-VN');
+const supplied=[[420000,190000],[0,110000],[350000,280000],[450000,140000],[150000,220000],[600000,320000],[520000,180000],[310000,165000],[750000,390000],[450000,530000],[300000,260000],[720000,510000],[910000,560000],[500000,850000],[500000,700000],[800000,600000],[1040000,530000],[1180000,920000]];
+const data=Array.from({length:31},(_,index)=>{
+ const date=new Date(Date.UTC(2026,7,24+index));
+ const amount=supplied[index];
+ return{date:date.toISOString().slice(0,10),label:date.getUTCDate()+'/'+(date.getUTCMonth()+1),income:amount?.[0]??0,expense:amount?.[1]??0,known:index<16||Boolean(amount),planned:index>15&&Boolean(amount)};
+});
+const maximum=Math.max(1,...data.flatMap(day=>[day.income,day.expense]));
+const timeline=document.getElementById('timeline'), plot=document.getElementById('plot'), drawing=document.getElementById('drawing'), days=document.getElementById('days');
+// A monotone cubic connects daily samples without creating extra peaks or troughs.
+function curve(points){
+ if(!points.length)return '';
+ let path='M'+points[0].x+','+points[0].y;
+ if(points.length===1)return path;
+ const slopes=points.slice(1).map((p,i)=>(p.y-points[i].y)/(p.x-points[i].x));
+ const tangent=points.map((_,i)=>i===0?slopes[0]:i===points.length-1?slopes.at(-1):slopes[i-1]*slopes[i]<=0?0:2/(1/slopes[i-1]+1/slopes[i]));
+ slopes.forEach((slope,i)=>{
+  if(slope===0){tangent[i]=0;tangent[i+1]=0;return;}
+  const a=tangent[i]/slope,b=tangent[i+1]/slope,magnitude=Math.hypot(a,b);
+  if(magnitude>3){tangent[i]=3*a*slope/magnitude;tangent[i+1]=3*b*slope/magnitude;}
+ });
+ points.slice(1).forEach((p,i)=>{const prior=points[i],dx=(p.x-prior.x)/3;path+=' C'+(prior.x+dx)+','+(prior.y+tangent[i]*dx)+' '+(p.x-dx)+','+(p.y-tangent[i+1]*dx)+' '+p.x+','+p.y;});
+ return path;
+}
+function series(kind,side){
+ const points=data.map((day,i)=>({x:side+(i+.5)*dayWidth,y:baseline+(kind==='income'?-1:1)*day[kind]/maximum*amplitude,known:day.known,planned:day.planned,value:day[kind]}));
+ const chunks=[];let chunk=[];
+ points.forEach(point=>{if(point.known)chunk.push(point);else if(chunk.length){chunks.push(chunk);chunk=[];}});if(chunk.length)chunks.push(chunk);
+ const cls=kind==='income'?'in':'out';let markup='';
+ chunks.forEach(part=>{
+  const path=curve(part), first=part[0],last=part.at(-1);
+  if(part.length>1){markup+='<path d="'+path+' L'+last.x+','+baseline+' L'+first.x+','+baseline+' Z" fill="url(#area-'+cls+')"/>';
+   markup+='<path class="trace '+cls+'" d="'+path+'"/>';
+  }
+  part.forEach(point=>{if(point.value>0)markup+='<circle class="dot '+cls+(point.planned?' planned':'')+'" cx="'+point.x+'" cy="'+point.y+'" r="3.4"/>';});
+ });
+ return markup;
+}
+function clearLabels(){
+ const origin=drawing.getBoundingClientRect(), samples={in:[],out:[]};
+ drawing.querySelectorAll('.trace').forEach(path=>{
+  const kind=path.classList.contains('in')?'in':'out',length=path.getTotalLength();
+  for(let at=0;at<=length;at+=1){const point=path.getPointAtLength(at);samples[kind].push(point);}
+ });
+ const moves=[];
+ days.querySelectorAll('.value').forEach(label=>{
+  const range=document.createRange();range.selectNodeContents(label);
+  const box=range.getBoundingClientRect(),kind=label.classList.contains('in')?'in':'out';
+  const points=samples[kind].filter(point=>point.x>=box.left-origin.left-3&&point.x<=box.right-origin.left+3);
+  if(!points.length)return;
+  const boundary=kind==='in'?Math.min(...points.map(point=>point.y)):Math.max(...points.map(point=>point.y));
+  const shift=kind==='in'?Math.min(0,boundary-6-(box.bottom-origin.top)):Math.max(0,boundary+6-(box.top-origin.top));
+  if(shift)moves.push([label,parseFloat(label.style.top)+shift]);
+ });
+ moves.forEach(([label,top])=>{label.style.top=top+'px';});
+}
+function render(centerToday=true){
+ const side=Math.max(0,(timeline.clientWidth-dayWidth)/2), width=31*dayWidth+2*side;
+ plot.style.width=width+'px';drawing.setAttribute('width',String(width));drawing.setAttribute('viewBox','0 0 '+width+' 242');
+ drawing.innerHTML='<defs><linearGradient id="area-in" gradientUnits="userSpaceOnUse" x1="0" y1="'+(baseline-amplitude)+'" x2="0" y2="'+baseline+'"><stop stop-color="#28c991" stop-opacity=".31"/><stop offset="1" stop-color="#28c991" stop-opacity=".015"/></linearGradient><linearGradient id="area-out" gradientUnits="userSpaceOnUse" x1="0" y1="'+baseline+'" x2="0" y2="'+(baseline+amplitude)+'"><stop stop-color="#d84f76" stop-opacity=".015"/><stop offset="1" stop-color="#d84f76" stop-opacity=".3"/></linearGradient></defs>'+series('income',side)+series('expense',side)+'<path class="axis" d="M0 '+baseline+'H'+width+'"/>';
+ days.innerHTML=data.map((day,i)=>{
+  const inY=baseline-day.income/maximum*amplitude-23,outY=baseline+day.expense/maximum*amplitude+9;
+  const description=day.known?'Thu nhập '+money.format(day.income)+' đồng. Chi tiêu '+money.format(day.expense)+' đồng.'+(day.planned?' Đã ghi trước.':''):'Chưa ghi giao dịch.';
+  return '<li class="day" data-date="'+day.date+'" data-income="'+day.income+'" data-expense="'+day.expense+'" style="left:'+(side+i*dayWidth)+'px" aria-label="'+day.label+'/2026. '+description+'"><span class="value in" style="top:'+inY+'px" aria-hidden="true">'+(day.known?money.format(day.income):'—')+'</span><span class="value out" style="top:'+outY+'px" aria-hidden="true">'+(day.known?money.format(day.expense):'—')+'</span><time class="day-date" datetime="'+day.date+'" aria-hidden="true">'+day.label+(i===15?'<small class="today">Hôm nay</small>':'')+'</time></li>';
+ }).join('');
+ if(centerToday)timeline.scrollLeft=side+15.5*dayWidth-timeline.clientWidth/2;
+ requestAnimationFrame(clearLabels);
+}
+new ResizeObserver(()=>render()).observe(timeline);render();document.fonts.ready.then(clearLabels);
+})();
+</script>
+</body>
+</html>

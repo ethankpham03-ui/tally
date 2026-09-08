@@ -1,6 +1,6 @@
 'use client';
 
-import { CaretDown, MagnifyingGlass, Plus, X } from '@phosphor-icons/react';
+import { ArrowLeft, CaretDown, MagnifyingGlass, Plus, X } from '@phosphor-icons/react';
 import { useId, useMemo, useState } from 'react';
 import { CategoryIcon, CUSTOM_CATEGORY_ICON_IDS } from './category-icons';
 import {
@@ -146,7 +146,7 @@ export function CategoryPicker({
             <div className="custom-category-editor">
               <label className="field"><span>{c.categoryPicker.customName}</span><input value={customName} onChange={(event) => { setCustomName(event.target.value); setCustomError(''); }} maxLength={40} placeholder={c.categoryPicker.customNamePlaceholder} aria-invalid={Boolean(customError)} aria-describedby={customError ? `${panelId}-custom-error` : undefined} />{customError && <small id={`${panelId}-custom-error`} className="field-error" role="alert">{customError}</small>}</label>
               <fieldset className="custom-icon-picker"><legend>{c.categoryPicker.customIcon}</legend><div>{CUSTOM_CATEGORY_ICON_IDS.map((icon, index) => <button key={icon} type="button" className={customIcon === icon ? 'is-selected' : ''} onClick={() => setCustomIcon(icon)} aria-pressed={customIcon === icon} aria-label={t('categoryPicker.iconOption', { number: index + 1 })}><CategoryIcon icon={icon} size={20} weight={customIcon === icon ? 'fill' : 'regular'} aria-hidden="true" /></button>)}</div></fieldset>
-              <div className="custom-category-actions"><button type="button" className="cancel-action" onClick={() => setIsCreating(false)}>{c.categoryPicker.back}</button><button type="button" className="primary-action" onClick={saveCustom}>{c.categoryPicker.saveCustom}</button></div>
+              <div className="custom-category-actions"><button type="button" className="cancel-action custom-category-back" onClick={() => setIsCreating(false)} aria-label={c.categoryPicker.back} title={c.categoryPicker.back}><ArrowLeft size={22} weight="bold" aria-hidden="true" /></button><button type="button" className="primary-action" onClick={saveCustom}>{c.categoryPicker.saveCustom}</button></div>
             </div>
           ) : (
             <>

@@ -1,5 +1,9 @@
 'use client';
 
+import { MoneyInput } from './money-input';
+import { DateInput } from './date-input';
+import { formatFullDate } from './date-display';
+
 import { ArrowBendUpLeft, ArrowsLeftRight, CaretDown, MagnifyingGlass, PencilSimple, Plus, Receipt, Trash, Wallet, WarningCircle } from '@phosphor-icons/react';
 import { useRef, useState, type FormEvent } from 'react';
 import { AccountIcon } from './account-icons';
@@ -8,8 +12,9 @@ import { CategoryPicker, expenseCategoryIcon, expenseCategoryLabel } from './cat
 import { SheetFrame, focusFirstInvalid } from './finance-dialog';
 import { accountDisplayName } from './accounts-ui';
 import { useI18n, type Locale } from './i18n';
+import { groupTransactionsByDay } from './ledger-groups';
 import {
-  CURRENCIES, convertToVnd, formatMoney, formatMoneyAmount, getDefaultAccountId, latestExchangeRate, majorAmountToMinor, parseMoneyInput,
+  CURRENCIES, convertToVnd, formatMoney, formatMoneyAmount, getDefaultAccountId, isValidDateOnly, latestExchangeRate, majorAmountToMinor, parseMoneyInput,
   type Account, type Currency, type CustomExpenseCategory, type ExpenseCategoryId, type FinanceData, type Subscription, type Transaction,
 } from './finance-v4';
 import './ledger.css';
@@ -35,6 +40,15 @@ const copy = {
     paymentDate: 'Payment date', record: 'Record payment', sourceBalance: 'Account currency',
     interestHelp: 'For card interest or bank fees, record an expense using the relevant category.',
     startHelp: 'Transactions before an account’s opening date need a balance review in Accounts.',
+    invalidDate: 'Choose a valid transaction date.',
+    beforeOpening: 'This transaction counts on your chosen date. The account’s opening date and opening balance stay unchanged.',
+    futureDate: 'This future transaction is saved now and is excluded from your current balance until its date.',
+    dailyIncome: 'Income', dailyExpense: 'Spending',
+    dailyCount: (count: number) => `${count} ${count === 1 ? 'transaction' : 'transactions'}`,
+    filteredTotals: 'Daily totals include only the transactions matching your filters.',
+    dailyRefunds: 'Refunds are deducted from spending.',
+    dailyExcluded: 'Transfers and balance adjustments are excluded from income and spending.',
+    dailyUnconverted: (count: number) => `Totals exclude ${count} unconverted ${count === 1 ? 'transaction' : 'transactions'}.`,
   },
   vi: {
     source: 'Thanh toán bằng', receive: 'Nhận vào', choose: 'Chọn nguồn tiền', accounts: 'Quản lý nguồn tiền',
@@ -56,6 +70,15 @@ const copy = {
     paymentDate: 'Ngày thanh toán', record: 'Ghi nhận thanh toán', sourceBalance: 'Tiền tệ của nguồn',
     interestHelp: 'Lãi thẻ và phí ngân hàng được ghi là khoản chi với danh mục phù hợp.',
     startHelp: 'Giao dịch trước ngày bắt đầu của nguồn cần đối chiếu số dư trong phần Nguồn tiền.',
+    invalidDate: 'Chọn ngày giao dịch hợp lệ.',
+    beforeOpening: 'Giao dịch được tính theo ngày bạn chọn. Ngày và số dư mở đầu của nguồn tiền được giữ nguyên.',
+    futureDate: 'Giao dịch tương lai được lưu ngay và chưa tính vào số dư hiện tại cho đến ngày giao dịch.',
+    dailyIncome: 'Thu nhập', dailyExpense: 'Chi tiêu',
+    dailyCount: (count: number) => `${count} giao dịch`,
+    filteredTotals: 'Tổng theo ngày chỉ tính các giao dịch khớp với bộ lọc hiện tại.',
+    dailyRefunds: 'Chi tiêu đã trừ các khoản hoàn tiền.',
+    dailyExcluded: 'Chuyển tiền và điều chỉnh số dư không tính vào thu/chi.',
+    dailyUnconverted: (count: number) => `Tổng chưa gồm ${count} giao dịch chưa quy đổi.`,
   },
 };
 
@@ -98,7 +121,7 @@ export function TransactionSheet({ data, initial, initialAccountId, refundOf, to
   const refundTitle = refundOf?.titleKey ? c.demo.transactions[refundOf.titleKey] : refundOf?.title;
   const [title, setTitle] = useState(initialTitle ?? (refundTitle ? `${l.refund}: ${refundTitle}` : ''));
   const [amount, setAmount] = useState(initial ? formatMoneyAmount(Math.abs(initial.amount), currency) : '');
-  const [date, setDate] = useState(initial?.date ?? today);
+  const [date, setDate] = useState(initial?.date ?? (refundOf && refundOf.date > today ? refundOf.date : today));
   const [category, setCategory] = useState<ExpenseCategoryId>(initial?.category !== 'income' && initial?.category ? initial.category : refundOf?.category !== 'income' && refundOf?.category ? refundOf.category : 'dining');
   const [customCategory, setCustomCategory] = useState<CustomExpenseCategory>();
   const [reporting, setReporting] = useState(initial?.reportingAmount === undefined ? '' : String(Math.abs(initial.reportingAmount)));
@@ -109,6 +132,10 @@ export function TransactionSheet({ data, initial, initialAccountId, refundOf, to
   const formRef = useRef<HTMLFormElement>(null);
   const canRememberAccount = !initial && !refundOf && kind !== 'refund';
   const sourceHelp = canRememberAccount ? accountChanged ? l.rememberSource : accountId === defaultAccountId ? l.defaultSource : undefined : undefined;
+  const isPostedPayment = Boolean(initial?.subscriptionPaymentId);
+  const dateHelp = !isPostedPayment && isValidDateOnly(date)
+    ? account?.openingDate && date < account.openingDate ? l.beforeOpening : date > today ? l.futureDate : undefined
+    : undefined;
   function changeAccount(nextId: string) {
     if (nextId === accountId) return;
     const selected = accounts.find((item) => item.id === nextId);
@@ -133,8 +160,9 @@ export function TransactionSheet({ data, initial, initialAccountId, refundOf, to
     if (!title.trim()) next.title = c.validation.transactionName;
     if (!account || (account.archived && account.id !== initial?.accountId)) next.account = l.chooseSource;
     if (parsed === null || parsed <= 0) next.amount = l.invalidAmount;
-    if (!date || date > today) next.date = c.validation.transactionFuture;
-    else if (account?.openingDate && date < account.openingDate) next.date = l.startHelp;
+    if (!isValidDateOnly(date)) next.date = l.invalidDate;
+    else if (isPostedPayment && date > today) next.date = c.validation.transactionFuture;
+    else if (isPostedPayment && account?.openingDate && date < account.openingDate) next.date = l.startHelp;
     if (currency !== 'VND' && converted !== undefined && (converted === null || converted <= 0)) next.reporting = l.invalidConversion;
     if (merchant !== undefined && (merchant === null || merchant <= 0)) next.merchant = l.invalidAmount;
     setErrors(next);
@@ -172,11 +200,11 @@ export function TransactionSheet({ data, initial, initialAccountId, refundOf, to
             {sourceHelp && <small id="transaction-account-help" className="field-help ledger-source-help">{sourceHelp}</small>}
             {errors.account && <small id="transaction-account-error" className="field-error ledger-source-help" role="alert">{errors.account}</small>}
             <label className="field"><span>{c.transactionForm.name}</span><input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder={c.transactionForm.namePlaceholder} aria-invalid={Boolean(errors.title)} />{errors.title && <small className="field-error" role="alert">{errors.title}</small>}</label>
-            <label className="field"><span>{c.transactionForm.amount}</span><div className="money-input"><input inputMode={['VND', 'JPY', 'KRW'].includes(currency) ? 'numeric' : 'decimal'} value={amount} onChange={(event) => changeAmount(event.target.value.replace(',', '.'))} placeholder="0" aria-invalid={Boolean(errors.amount)} /><strong>{currency}</strong></div>{errors.amount && <small className="field-error" role="alert">{errors.amount}</small>}</label>
+            <label className="field"><span>{c.transactionForm.amount}</span><div className="money-input"><MoneyInput value={amount} placeholder="0" aria-invalid={Boolean(errors.amount)} currency={currency} onValueChange={changeAmount} /><strong>{currency}</strong></div>{errors.amount && <small className="field-error" role="alert">{errors.amount}</small>}</label>
             {kind !== 'income' && <CategoryPicker label={c.transactionForm.category} value={category} customCategories={customCategory ? [...data.customCategories, customCategory] : data.customCategories} onChange={(value, created) => { setCategory(value); setCustomCategory(created); }} />}
-            <label className="field"><span>{c.transactionForm.date}</span><input type="date" value={date} max={today} min={account?.openingDate ?? undefined} onChange={(event) => { setDate(event.target.value); if (!initial && currency !== 'VND') setReporting(suggestedReporting(data, amount, currency, event.target.value)); }} aria-invalid={Boolean(errors.date)} />{errors.date && <small className="field-error" role="alert">{errors.date}</small>}</label>
-            {currency !== 'VND' && <label className="field"><span>{l.converted}</span><div className="money-input"><input inputMode="numeric" value={reporting} onChange={(event) => setReporting(event.target.value)} placeholder="0" aria-invalid={Boolean(errors.reporting)} /><strong>VND</strong></div><small className="field-help">{l.conversionHelp} {l.noConversion}</small>{errors.reporting && <small className="field-error" role="alert">{errors.reporting}</small>}</label>}
-            <details className="merchant-details" open={initial?.originalAmount !== undefined || undefined}><summary>{l.original}</summary><p className="field-help">{l.originalHelp}</p><div className="split-fields"><label className="field"><span>{l.originalCurrency}</span><select value={merchantCurrency} onChange={(event) => setMerchantCurrency(event.target.value as Currency)}>{CURRENCIES.map((code) => <option key={code}>{code}</option>)}</select></label><label className="field"><span>{l.originalAmount}</span><input inputMode="decimal" value={merchantAmount} onChange={(event) => setMerchantAmount(event.target.value.replace(',', '.'))} aria-invalid={Boolean(errors.merchant)} />{errors.merchant && <small className="field-error" role="alert">{errors.merchant}</small>}</label></div></details>
+            <label className="field"><span>{c.transactionForm.date}</span><DateInput value={date} max={isPostedPayment ? today : undefined} min={isPostedPayment ? account?.openingDate ?? undefined : undefined} aria-invalid={Boolean(errors.date)} aria-describedby={dateHelp ? 'transaction-date-help' : undefined} onValueChange={(value) => { setDate(value); if (!initial && currency !== 'VND') setReporting(suggestedReporting(data, amount, currency, value)); }} />{dateHelp && <small id="transaction-date-help" className="field-help">{dateHelp}</small>}{errors.date && <small className="field-error" role="alert">{errors.date}</small>}</label>
+            {currency !== 'VND' && <label className="field"><span>{l.converted}</span><div className="money-input"><MoneyInput value={reporting} placeholder="0" aria-invalid={Boolean(errors.reporting)} currency="VND" onValueChange={setReporting} /><strong>VND</strong></div><small className="field-help">{l.conversionHelp} {l.noConversion}</small>{errors.reporting && <small className="field-error" role="alert">{errors.reporting}</small>}</label>}
+            <details className="merchant-details" open={initial?.originalAmount !== undefined || undefined}><summary>{l.original}</summary><p className="field-help">{l.originalHelp}</p><div className="split-fields"><label className="field"><span>{l.originalCurrency}</span><select value={merchantCurrency} onChange={(event) => setMerchantCurrency(event.target.value as Currency)}>{CURRENCIES.map((code) => <option key={code}>{code}</option>)}</select></label><label className="field"><span>{l.originalAmount}</span><MoneyInput value={merchantAmount} aria-invalid={Boolean(errors.merchant)} currency={merchantCurrency} onValueChange={setMerchantAmount} />{errors.merchant && <small className="field-error" role="alert">{errors.merchant}</small>}</label></div></details>
             {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
             <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{busy ? l.saving : initial ? c.transactionForm.update : c.transactionForm.save}</button></div>
           </fieldset>
@@ -186,14 +214,15 @@ export function TransactionSheet({ data, initial, initialAccountId, refundOf, to
   );
 }
 
-export function TransactionList({ data, transactions, compact = false, onDelete, onEdit, onRefund }: {
-  data: FinanceData; transactions: Transaction[]; compact?: boolean;
+export function TransactionList({ data, transactions, compact = false, groupByDate = false, onDelete, onEdit, onRefund }: {
+  data: FinanceData; transactions: Transaction[]; compact?: boolean; groupByDate?: boolean;
   onDelete?: (id: string) => void; onEdit?: (item: Transaction) => void; onRefund?: (item: Transaction) => void;
 }) {
   const { c, locale, localeTag, formatDate, t } = useI18n();
   const l = copy[locale];
   if (!transactions.length) return <div className="empty-state"><Receipt size={28} aria-hidden="true" /><strong>{c.transactions.emptyTitle}</strong><span>{c.transactions.emptyBody}</span></div>;
-  return <div className={`transaction-list ledger-list ${compact ? 'is-compact' : ''}`}>{transactions.map((transaction) => {
+  const grouped = groupByDate && !compact;
+  const renderTransaction = (transaction: Transaction) => {
     const account = data.accounts.find((item) => item.id === transaction.accountId)!;
     const target = transaction.toAccountId ? data.accounts.find((item) => item.id === transaction.toAccountId) : undefined;
     const title = transaction.titleKey ? c.demo.transactions[transaction.titleKey] : transaction.systemTitle === 'setup' ? l.setup : transaction.systemTitle === 'transfer_fee' ? l.fee : transaction.title;
@@ -203,11 +232,26 @@ export function TransactionList({ data, transactions, compact = false, onDelete,
     return <article className={`transaction-row ledger-row kind-${transaction.kind}`} key={transaction.id}>
       <span className={`transaction-icon ${transaction.kind === 'income' ? 'is-income' : ''}`}>{transaction.kind === 'transfer' ? <ArrowsLeftRight size={19} weight="bold" /> : transaction.kind === 'refund' ? <ArrowBendUpLeft size={19} weight="bold" /> : categoryIcon ? <CategoryIcon icon={categoryIcon} size={19} weight="fill" /> : <Wallet size={19} weight="fill" />}</span>
       <span className="transaction-copy"><strong>{title}</strong><small>{typeLabel} · {accountDisplayName(account, locale)}{target ? ` → ${accountDisplayName(target, locale)}` : ''}</small>{transaction.originalCurrency && transaction.originalAmount !== undefined && <small>{nativeMoney(transaction.originalAmount, transaction.originalCurrency, localeTag)}</small>}</span>
-      <time dateTime={transaction.date}>{formatDate(transaction.date)}</time>
+      {!grouped && <time dateTime={transaction.date}>{formatDate(transaction.date)}</time>}
       <span className="ledger-row-amount"><strong className={`transaction-amount ${transaction.kind === 'income' || transaction.kind === 'refund' ? 'is-positive' : ''}`} title={native}>{transaction.amount > 0 ? '+' : ''}{native}</strong>{target && <small>→ {nativeMoney(transaction.receivedAmount!, target.currency, localeTag)}</small>}{account.currency !== 'VND' && !target && <small>{transaction.reportingAmount === undefined ? l.unconverted : `≈ ${nativeMoney(transaction.reportingAmount, 'VND', localeTag)}`}</small>}</span>
       {(onEdit || onDelete || onRefund) && <div className="row-actions">{onRefund && transaction.kind === 'expense' && <button className="row-action" type="button" onClick={() => onRefund(transaction)} aria-label={`${l.refundAction}: ${title}`} title={l.refundAction}><ArrowBendUpLeft size={18} /></button>}{onEdit && transaction.kind !== 'adjustment' && <button className="row-action" type="button" onClick={() => onEdit(transaction)} aria-label={t('transactions.editAria', { title })}><PencilSimple size={18} /></button>}{onDelete && <button className="row-action" type="button" onClick={() => onDelete(transaction.id)} aria-label={t('transactions.deleteAria', { title })}><Trash size={18} /></button>}</div>}
     </article>;
-  })}</div>;
+  };
+  const dateFormatter = new Intl.DateTimeFormat(localeTag, { weekday: 'short', timeZone: 'UTC' });
+  return <div className={`transaction-list ledger-list ${compact ? 'is-compact' : ''} ${grouped ? 'is-grouped' : ''}`}>
+    {grouped ? groupTransactionsByDay(transactions).map((day) => <section className="ledger-day" key={day.date} aria-labelledby={`ledger-day-${day.date}`}>
+      <header className="ledger-day-header">
+        <div className="ledger-day-heading"><h3 id={`ledger-day-${day.date}`}><time dateTime={day.date}>{formatFullDate(day.date)} · {dateFormatter.format(new Date(`${day.date}T00:00:00Z`))}</time></h3><span>{l.dailyCount(day.transactions.length)}</span></div>
+        <dl className="ledger-day-totals">
+          <div><dt>{l.dailyIncome}</dt><dd className={day.income > 0 ? 'is-income' : ''}>{nativeMoney(day.income, 'VND', localeTag)}</dd></div>
+          <div><dt>{l.dailyExpense}</dt><dd className={day.expense > 0 ? 'is-expense' : day.expense < 0 ? 'is-income' : ''}>{nativeMoney(day.expense, 'VND', localeTag)}</dd></div>
+        </dl>
+        {(day.refundCount > 0 || day.excludedTransactionCount > 0) && <p className="ledger-day-note">{day.refundCount > 0 ? l.dailyRefunds : ''}{day.refundCount > 0 && day.excludedTransactionCount > 0 ? ' ' : ''}{day.excludedTransactionCount > 0 ? l.dailyExcluded : ''}</p>}
+        {day.unconvertedTransactionCount > 0 && <p className="ledger-day-note is-warning">{l.dailyUnconverted(day.unconvertedTransactionCount)}</p>}
+      </header>
+      <div className="ledger-day-rows">{day.transactions.map(renderTransaction)}</div>
+    </section>) : transactions.map(renderTransaction)}
+  </div>;
 }
 
 export function TransactionsView({ data, transactions, onDelete, onEdit, onRefund, onAdd, onTransfer }: {
@@ -219,6 +263,7 @@ export function TransactionsView({ data, transactions, onDelete, onEdit, onRefun
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [accountId, setAccountId] = useState('all');
+  const isFiltered = accountId !== 'all' || filter !== 'all' || query.trim().length > 0;
   const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
   const filtered = transactions.filter((item) => {
     const source = data.accounts.find((account) => account.id === item.accountId);
@@ -233,7 +278,7 @@ export function TransactionsView({ data, transactions, onDelete, onEdit, onRefun
     <label className="ledger-account-filter"><span className="sr-only">{l.sourceFilter}</span><select value={accountId} onChange={(event) => setAccountId(event.target.value)}><option value="all">{l.allSources}</option>{data.accounts.map((account) => <option key={account.id} value={account.id}>{accountDisplayName(account, locale)}{account.archived ? ` · ${l.archived}` : ''}</option>)}</select></label>
     <div className="filter-group" role="group" aria-label={c.transactions.filterAria}>{(['all', 'income', 'expense', 'transfer', 'refund'] as const).map((item) => <button type="button" key={item} className={filter === item ? 'is-active' : ''} onClick={() => setFilter(item)} aria-pressed={filter === item}>{item === 'transfer' ? l.transfer : item === 'refund' ? l.refund : c.transactions.filter[item]}</button>)}</div>
     <div className="ledger-toolbar-actions"><button className="secondary-action" type="button" onClick={onTransfer}><ArrowsLeftRight size={18} weight="bold" />{l.transfer}</button><button className="secondary-action" type="button" onClick={onAdd}><Plus size={18} weight="bold" />{c.actions.add}</button></div>
-  </div>{filtered.length ? <TransactionList data={data} transactions={filtered} onDelete={onDelete} onEdit={onEdit} onRefund={onRefund} /> : <div className="empty-state"><MagnifyingGlass size={28} /><strong>{transactions.length ? c.transactions.noResultsTitle : c.transactions.emptyTitle}</strong><span>{transactions.length ? c.transactions.noResultsBody : c.transactions.emptyBody}</span><button type="button" onClick={onAdd}>{c.actions.addTransaction}</button></div>}</section>;
+  </div>{isFiltered && filtered.length > 0 && <p className="ledger-filter-note">{l.filteredTotals}</p>}{filtered.length ? <TransactionList data={data} transactions={filtered} groupByDate onDelete={onDelete} onEdit={onEdit} onRefund={onRefund} /> : <div className="empty-state"><MagnifyingGlass size={28} /><strong>{transactions.length ? c.transactions.noResultsTitle : c.transactions.emptyTitle}</strong><span>{transactions.length ? c.transactions.noResultsBody : c.transactions.emptyBody}</span><button type="button" onClick={onAdd}>{c.actions.addTransaction}</button></div>}</section>;
 }
 
 export type PaymentDraft = { accountId: string; amount: number; reportingAmount?: number; paidOn: string; expectedOccurrence: string };
@@ -273,9 +318,9 @@ export function PaymentSheet({ data, subscription, today, onClose, onSave, onMan
     <div className="payment-invoice"><strong>{subscription.name}</strong><span>{l.invoice}: {nativeMoney(majorAmountToMinor(subscription.amount, subscription.currency), subscription.currency, localeTag)}</span><span>{l.occurrence}: {formatDate(occurrence)}</span></div>
     {!accounts.length ? <div className="empty-state"><strong>{l.missingSource}</strong><button type="button" onClick={onManageAccounts}>{l.accounts}</button></div> : <form onSubmit={submit} noValidate><fieldset className="ledger-fields" disabled={busy}>
       <label className="field"><span>{l.source}</span><span className="ledger-source-control">{account && <span className="ledger-source-icon"><AccountIcon account={account} size={30} /></span>}<select autoFocus value={accountId} onChange={(event) => { const selected = accounts.find((item) => item.id === event.target.value); setAccountId(event.target.value); if (selected?.currency !== currency) { setAmount(''); setReporting(''); } }}>{accounts.map((item) => <option key={item.id} value={item.id}>{accountDisplayName(item, locale)} · {item.currency}</option>)}</select><CaretDown className="ledger-source-caret" size={18} weight="bold" aria-hidden="true" /></span></label>
-      <label className="field"><span>{l.actual}</span><div className="money-input"><input inputMode="decimal" value={amount} onChange={(event) => { const value = event.target.value.replace(',', '.'); setAmount(value); if (currency !== 'VND') setReporting(suggestedReporting(data, value, currency, date)); }} placeholder="0" /><strong>{currency}</strong></div></label>
-      <label className="field"><span>{l.paymentDate}</span><input type="date" value={date} max={today} min={account?.openingDate ?? undefined} onChange={(event) => setDate(event.target.value)} /></label>
-      {currency !== 'VND' && <label className="field"><span>{l.converted}</span><input inputMode="numeric" value={reporting} onChange={(event) => setReporting(event.target.value)} /><small className="field-help">{l.conversionHelp} {l.noConversion}</small></label>}
+      <label className="field"><span>{l.actual}</span><div className="money-input"><MoneyInput value={amount} placeholder="0" currency={currency} onValueChange={(value) => { setAmount(value); if (currency !== 'VND') setReporting(suggestedReporting(data, value, currency, date)); }} /><strong>{currency}</strong></div></label>
+      <label className="field"><span>{l.paymentDate}</span><DateInput value={date} max={today} min={account?.openingDate ?? undefined} onValueChange={(value) => setDate(value)} /></label>
+      {currency !== 'VND' && <label className="field"><span>{l.converted}</span><MoneyInput value={reporting} currency="VND" onValueChange={setReporting} /><small className="field-help">{l.conversionHelp} {l.noConversion}</small></label>}
       {error && <p className="field-error" role="alert"><WarningCircle size={18} /> {error}</p>}
       <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{busy ? l.saving : l.record}</button></div>
     </fieldset></form>}

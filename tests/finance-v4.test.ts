@@ -242,12 +242,12 @@ test('subscription confirmation records actual card debit plus original currency
 });
 
 test('future-dated entries do not change current balances, budgets, or reports', () => {
-  const data = ledger([account('bank', 'bank', 'VND', 1_000_000)]);
+  let data = ledger([account('bank', 'bank', 'VND', 1_000_000)]);
   data.budgets = [{ id: 'shopping', category: 'shopping', limit: 1_000_000 }];
   const future = { id: 'future', kind: 'expense' as const, accountId: 'bank', amount: -500_000, reportingAmount: -500_000, title: 'Future purchase', category: 'shopping' as const, date: '2026-09-20' };
-  // Existing backups may contain future entries; new posted entries must use an actual date.
-  assert.throws(() => saveLedgerTransaction(data, future));
-  data.transactions = [future];
+  // Plans are saved immediately but do not affect reports before their own date.
+  data = saveLedgerTransaction(data, future);
+  assert.equal(data.transactions.length, 1);
   assert.equal(parseFinanceData(JSON.stringify(data)).status, 'ok');
   assert.equal(balances(data).bank, 1_000_000);
   assert.equal(deriveFinanceSummary(data, reference).expenseThisMonth, 0);

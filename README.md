@@ -48,7 +48,8 @@ Most expense trackers treat recurring subscriptions as a separate list. Tally co
 ## What works
 
 - Set up cash, bank, wallet, and credit-card opening balances in a short onboarding flow, import an existing backup, or start with zero cash and set up later.
-- Add, edit, search, filter, and remove transactions with Undo.
+- Add, edit, search, filter, and remove transactions with Undo; review them in daily groups with income and spending totals.
+- Backdate missed transactions or record future income and spending, with day-first date entry and automatic thousands separators in money fields.
 - Manage money sources, inspect account histories, reconcile balances, and archive accounts while preserving history.
 - Reorder sources with touch, mouse, or keyboard, and keep a saved default source for new transactions.
 - Recognize cash with Apple Wallet artwork and banks with bundled official banking app icons for Vietnam, the US, and the UK.
@@ -60,7 +61,7 @@ Most expense trackers treat recurring subscriptions as a separate list. Tally co
 - Add, edit, pause, and remove recurring subscriptions.
 - Pick from a traceable subscription catalog or enter a custom service and price.
 - Record each renewal once and advance its next billing date safely.
-- Explore income/spending and movements of available money across 7 days, 30 days, 6 months, or 1 year.
+- Follow separate income and spending waves across 31 days, centered on today, with exact daily amounts and bounded horizontal scrolling.
 - Export or import a validated personal backup, or reset local data with confirmation to start onboarding again.
 - Switch the complete interface between English and Vietnamese, light and dark, desktop and mobile.
 

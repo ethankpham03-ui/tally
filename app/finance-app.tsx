@@ -1,5 +1,8 @@
 'use client';
 
+import { MoneyInput } from './money-input';
+import { DateInput } from './date-input';
+
 import {
   ArrowDownRight,
   ArrowSquareOut,
@@ -60,8 +63,6 @@ import {
   createId,
   dateOnlyDayDifference,
   deriveBudgetUsage,
-  deriveCashflowSeries,
-  deriveLiquiditySeries,
   deriveFinanceSummary,
   deriveSubscriptionTotals,
   isSafeSubscriptionAmount,
@@ -71,7 +72,6 @@ import {
   serializeFinanceData,
   type BillingCycle,
   type Budget,
-  type CashflowPeriod,
   type CustomExpenseCategory,
   type ExpenseCategoryId,
   type FinanceData,
@@ -83,6 +83,7 @@ import {
 import { createFinanceStorageController, type FinanceStorageController } from './finance-storage';
 import { initializeFinanceStorage } from './finance-bootstrap';
 import { OnboardingFlow } from './onboarding-ui';
+import { CashflowPanel } from './cashflow-panel';
 import { AccountsOverview, AccountsSheet, accountDisplayName } from './accounts-ui';
 import { TransactionSheet, TransactionList, TransactionsView, PaymentSheet, type LedgerDraft, type PaymentDraft } from './ledger-ui';
 import { SheetFrame, focusFirstInvalid } from './finance-dialog';
@@ -913,7 +914,6 @@ function Overview({ data, onAccounts, onChangeAccounts, summary, transactions, s
 }) {
   const { c, locale, formatCurrency, formatPercent, formatDate, t } = useI18n();
   const vi = locale === 'vi';
-  const [period, setPeriod] = useState<CashflowPeriod>('30d');
   const upcoming = [...subscriptions].sort((a, b) => a.nextRenewal.localeCompare(b.nextRenewal)).slice(0, 3);
   const balanceLabel = formatCurrency(summary.availableBalance);
   const incomeLabel = formatCurrency(summary.incomeThisMonth);
@@ -936,7 +936,7 @@ function Overview({ data, onAccounts, onChangeAccounts, summary, transactions, s
         </section>
         <AccountsOverview data={data} onOpen={onAccounts} onChange={onChangeAccounts} />
         <RenewalSchedule subscriptions={upcoming} today={today} onOpen={() => onNavigate('subscriptions')} className="mobile-renewal-schedule surface-raised" />
-        <CashflowPanel data={data} transactions={transactions} today={today} period={period} onPeriodChange={setPeriod} />
+        <CashflowPanel data={data} today={today} />
         <section className="activity-panel surface-raised">
           <div className="section-heading"><h2>{c.overview.recentTransactions}</h2><button type="button" className="quiet-link" onClick={() => onNavigate('transactions')}>{c.overview.viewAll} <CaretRight size={14} weight="bold" aria-hidden="true" /></button></div>
           <TransactionList data={data} transactions={transactions.slice(0, 3)} compact />
@@ -999,54 +999,6 @@ function RenewalSchedule({ subscriptions, today, onOpen, className = '' }: { sub
           </ol>
         </div>
       ) : <p className="renewal-empty">{c.renewals.emptySchedule}</p>}
-    </section>
-  );
-}
-
-function CashflowPanel({ data, transactions, today, period, onPeriodChange }: { data: FinanceData; transactions: Transaction[]; today: string; period: CashflowPeriod; onPeriodChange: (period: CashflowPeriod) => void }) {
-  const { c, locale, formatCompactNumber, formatCurrency, localeTag } = useI18n();
-  const vi = locale === 'vi';
-  const [mode, setMode] = useState<'spending' | 'liquid'>('spending');
-  const options: Array<{ id: CashflowPeriod; label: string }> = [
-    { id: '7d', label: c.cashflow.period.sevenDays },
-    { id: '30d', label: c.cashflow.period.thirtyDays },
-    { id: '6m', label: c.cashflow.period.sixMonths },
-    { id: '1y', label: c.cashflow.period.oneYear },
-  ];
-  const points = mode === 'spending' ? deriveCashflowSeries(transactions, period, dateReference(today)) : deriveLiquiditySeries(data, period, dateReference(today));
-  const missing = points.reduce((sum, point) => sum + point.unconvertedTransactionCount, 0);
-  const chartTitle = mode === 'spending' ? (vi ? 'Thu nhập và chi tiêu' : 'Income and spending') : (vi ? 'Biến động tiền đang có' : 'Money on hand movement');
-  const values = points.map((point) => point.net);
-  const maxMagnitude = Math.max(...values.map((point) => Math.abs(point)), 1);
-  const scale = Math.ceil(maxMagnitude / 1_000_000) * 1_000_000;
-  const labelIndexes = [0, Math.floor((points.length - 1) / 3), Math.floor(((points.length - 1) * 2) / 3), points.length - 1];
-  const labels = labelIndexes.map((index) => {
-    const point = points[Math.max(0, index)];
-    const options: Intl.DateTimeFormatOptions = period === '7d' ? { weekday: 'short' } : period === '30d' ? { day: '2-digit', month: '2-digit' } : { month: 'short' };
-    return new Intl.DateTimeFormat(localeTag, options).format(new Date(`${point.startDate}T12:00:00`));
-  });
-  const net = values.reduce((sum, value) => sum + value, 0);
-  if (transactions.length === 0) return (
-    <section className="cashflow-panel surface-raised">
-      <div className="section-heading"><h2>{vi ? 'Thu nhập và chi tiêu' : 'Income and spending'}</h2></div>
-      <div className="cashflow-empty"><TrendUp size={30} weight="bold" aria-hidden="true" /><strong>{vi ? 'Dòng tiền bắt đầu từ giao dịch của bạn' : 'Your cash flow starts with a transaction'}</strong><p>{vi ? 'Ghi khoản thu hoặc chi đầu tiên để xem tiền thay đổi theo thời gian.' : 'Record your first income or expense to see how your money changes over time.'}</p></div>
-    </section>
-  );
-  return (
-    <section className="cashflow-panel surface-raised">
-      <div className="section-heading cashflow-heading">
-        <div><h2>{chartTitle}</h2><span className={`cashflow-net ${net >= 0 ? 'is-positive' : 'is-negative'}`}>{net >= 0 ? '+' : ''}{formatCurrency(net)}</span></div>
-        <div className="segmented-control" role="group" aria-label={c.cashflow.rangeAria}>{options.map((option) => <button key={option.id} type="button" className={period === option.id ? 'is-active' : ''} onClick={() => onPeriodChange(option.id)} aria-pressed={period === option.id}>{option.label}</button>)}</div>
-      </div>
-      <div className="cashflow-mode" role="group" aria-label={vi ? 'Nội dung biểu đồ' : 'Chart measure'}><button type="button" aria-pressed={mode === 'spending'} onClick={() => setMode('spending')}>{vi ? 'Thu / Chi' : 'Income / Spending'}</button><button type="button" aria-pressed={mode === 'liquid'} onClick={() => setMode('liquid')}>{vi ? 'Tiền đang có' : 'Money on hand'}</button></div>
-      <p className="field-help">{mode === 'spending' ? (vi ? 'Mua bằng thẻ tính vào chi tiêu; chuyển tiền và trả nợ thẻ không tính lần nữa.' : 'Card purchases count as spending. Transfers and card repayments do not count again.') : (vi ? 'Gồm tiền trả nợ thẻ và điều chỉnh đối chiếu. Chuyển giữa nguồn tiền của bạn được bù trừ; số dư ban đầu và thiết lập nguồn không tính vào biểu đồ.' : 'Includes card repayments and reconciliation adjustments. Transfers between cash accounts cancel out; opening balances and account setup are excluded.')}</p>
-      {missing > 0 && <p className="valuation-note is-warning">{vi ? `${missing} khoản chưa quy đổi; biểu đồ chưa đầy đủ.` : `${missing} unconverted entries; this chart is incomplete.`}</p>}
-      <div className="chart-scale" aria-hidden="true"><span>{formatCompactNumber(scale)}</span><span>0</span><span>-{formatCompactNumber(scale)}</span></div>
-      <div className="cashflow-chart" style={{ gridTemplateColumns: `repeat(${points.length}, minmax(3px, 1fr))` }} role="img" aria-label={`${chartTitle}: ${formatCurrency(net)}`}>
-        <span className="zero-line" aria-hidden="true" />
-        {values.map((point, index) => <span className="chart-column" key={points[index].key}><i className={point >= 0 ? 'bar-positive' : 'bar-negative'} style={{ height: `${point === 0 ? 2 : Math.max(8, Math.round((Math.abs(point) / maxMagnitude) * 68))}px` }} /></span>)}
-      </div>
-      <div className="chart-labels" aria-hidden="true">{labels.map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}</div>
     </section>
   );
 }
@@ -1339,14 +1291,14 @@ function SubscriptionSheet({ initial, accounts, today, onClose, onSave }: { init
           <div className="manual-plan-fields">
             {!selectedPlan && <label className="field"><span>{c.subscriptionForm.customPlanName}</span><input value={plan} onChange={(event) => setPlan(event.target.value)} placeholder={c.subscriptionForm.planPlaceholder} /></label>}
             <div className="split-fields">
-              <label className="field"><span>{c.subscriptionForm.cost}</span><div className="money-input"><input inputMode="decimal" value={amount} onChange={(event) => { const cleaned = event.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1'); setAmount(currency === 'VND' || currency === 'JPY' || currency === 'KRW' ? cleaned.replace(/\..*$/, '') : cleaned); }} placeholder="0" aria-invalid={Boolean(errors.amount)} aria-describedby={errors.amount ? 'subscription-amount-error' : undefined} /><strong>{currency}</strong></div>{errors.amount && <small id="subscription-amount-error" className="field-error" role="alert">{errors.amount}</small>}</label>
+              <label className="field"><span>{c.subscriptionForm.cost}</span><div className="money-input"><MoneyInput value={amount} placeholder="0" aria-invalid={Boolean(errors.amount)} aria-describedby={errors.amount ? 'subscription-amount-error' : undefined} currency={currency} onValueChange={setAmount} /><strong>{currency}</strong></div>{errors.amount && <small id="subscription-amount-error" className="field-error" role="alert">{errors.amount}</small>}</label>
               <label className="field"><span>{c.subscriptionForm.currency}</span><select value={currency} onChange={(event) => { const nextCurrency = event.target.value as SubscriptionCurrency; setCurrency(nextCurrency); if (nextCurrency === 'VND' || nextCurrency === 'JPY' || nextCurrency === 'KRW') setAmount((current) => current.replace(/\..*$/, '')); }}>{(['VND', 'USD', 'EUR', 'GBP', 'JPY', 'KRW', 'SGD', 'THB', 'AUD', 'CAD'] as const).map((code) => <option value={code} key={code}>{code}</option>)}</select></label>
             </div>
             <label className="field"><span>{c.subscriptionForm.cycle.label}</span><select value={cycle} onChange={(event) => setCycle(event.target.value as BillingCycle)}><option value="month">{c.subscriptionForm.cycle.month}</option><option value="year">{c.subscriptionForm.cycle.year}</option></select></label>
           </div>
         )}
 
-        <label className="field"><span>{c.subscriptionForm.renewalDate}</span><input type="date" min={initial ? undefined : today} value={nextRenewal} onChange={(event) => setNextRenewal(event.target.value)} aria-invalid={Boolean(errors.nextRenewal)} aria-describedby={errors.nextRenewal ? 'subscription-renewal-error' : undefined} />{errors.nextRenewal && <small id="subscription-renewal-error" className="field-error" role="alert">{errors.nextRenewal}</small>}</label>
+        <label className="field"><span>{c.subscriptionForm.renewalDate}</span><DateInput min={initial ? undefined : today} value={nextRenewal} aria-invalid={Boolean(errors.nextRenewal)} aria-describedby={errors.nextRenewal ? 'subscription-renewal-error' : undefined} onValueChange={(value) => setNextRenewal(value)} />{errors.nextRenewal && <small id="subscription-renewal-error" className="field-error" role="alert">{errors.nextRenewal}</small>}</label>
 <label className="field"><span>{locale === 'vi' ? 'Nguồn thanh toán mặc định' : 'Default payment account'}</span><select value={accountId} onChange={(event) => setAccountId(event.target.value)}><option value="">{locale === 'vi' ? 'Chọn khi ghi nhận thanh toán' : 'Choose when recording payment'}</option>{accounts.filter((account) => (!account.archived && account.kind !== 'legacy') || account.id === initial?.accountId).map((account) => <option key={account.id} value={account.id} disabled={account.archived}>{accountDisplayName(account, locale)} · {account.currency}</option>)}</select><small className="field-help">{locale === 'vi' ? 'Đổi nguồn chỉ áp dụng cho các lần thanh toán sau.' : 'Changing this only affects future payments.'}</small></label>
         {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
         <div className="info-callout"><CalendarBlank size={20} weight="bold" aria-hidden="true" /><span>{t('subscriptionForm.callout', { appName: APP_NAME })}</span></div>
@@ -1387,7 +1339,7 @@ function BudgetSheet({ initial, budgets, customCategories, onClose, onSave }: { 
       <form ref={formRef} onSubmit={submit} noValidate>
         <fieldset className="ledger-fields" disabled={busy}>
         <CategoryPicker autoFocus label={c.budgetForm.category} value={category} customCategories={pendingCustomCategory ? [...customCategories, pendingCustomCategory] : customCategories} onChange={(nextCategory, created) => { setCategory(nextCategory); setPendingCustomCategory((current) => created ?? (current?.id === nextCategory ? current : undefined)); }} error={errors.category} errorId="budget-category-error" />
-        <label className="field"><span>{c.budgetForm.monthlyLimit}</span><div className="money-input"><input inputMode="numeric" value={limit} onChange={(event) => setLimit(event.target.value.replace(/\D/g, ''))} placeholder="0" aria-invalid={Boolean(errors.limit)} aria-describedby={errors.limit ? 'budget-limit-error' : undefined} /><strong>{currencySymbol}</strong></div>{errors.limit && <small id="budget-limit-error" className="field-error" role="alert">{errors.limit}</small>}</label>
+        <label className="field"><span>{c.budgetForm.monthlyLimit}</span><div className="money-input"><MoneyInput value={limit} placeholder="0" aria-invalid={Boolean(errors.limit)} aria-describedby={errors.limit ? 'budget-limit-error' : undefined} currency="VND" onValueChange={setLimit} /><strong>{currencySymbol}</strong></div>{errors.limit && <small id="budget-limit-error" className="field-error" role="alert">{errors.limit}</small>}</label>
         {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
         <div className="sheet-actions"><button type="button" className="cancel-action" onClick={onClose}>{c.common.cancel}</button><button type="submit" className="primary-action">{initial ? c.budgetForm.update : c.budgetForm.save}</button></div>
         </fieldset>

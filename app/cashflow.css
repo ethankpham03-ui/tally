@@ -1,0 +1,71 @@
+.cashflow-panel.cf-panel {
+  --cf-income: #0b715a;
+  --cf-expense: #a03c59;
+  --cf-area-income: #28c991;
+  --cf-area-expense: #d84f76;
+  --cf-dot-rim: #f0f4f7;
+  --cf-muted: #515a6e;
+  --cf-date: #394758;
+  --cf-axis: #46576e40;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--ink);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #e9f3f2 0%, #f0f2f8 58%, #f5eaf0 100%);
+  box-shadow: var(--shadow-raised);
+}
+:root[data-theme='dark'] .cf-panel {
+  --cf-income: #80e4c0;
+  --cf-expense: #f1b2c0;
+  --cf-dot-rim: #1a2331;
+  --cf-muted: #b9c2ca;
+  --cf-date: #d4dce2;
+  --cf-axis: #a8b9c940;
+  background: linear-gradient(145deg, #192a32 0%, #191f30 58%, #261e30 100%);
+}
+.cf-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px 22px 0; }
+.cf-heading h2 { margin: 0; font-family: var(--font-heading); font-size: 18px; font-weight: 400; line-height: 1.35; }
+.cf-unit { color: var(--cf-muted); font-size: 10.8px; }
+.cf-series-labels { display: flex; align-items: center; justify-content: space-between; padding: 9px 22px 0; font-size: 10.8px; }
+.cf-series-labels span { display: flex; align-items: center; gap: 6px; }
+.cf-income, .cf-day-income-value { color: var(--cf-income); }
+.cf-expense, .cf-day-expense-value { color: var(--cf-expense); }
+.cf-day-scroll { position: relative; width: 100%; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: none; touch-action: pan-x pan-y; }
+.cf-day-scroll::-webkit-scrollbar { display: none; }
+.cf-day-scroll:focus-visible { outline: 2px solid var(--cf-income); outline-offset: -3px; }
+.cf-wave-plot { position: relative; min-width: 100%; height: 242px; }
+.cf-wave-plot::after { content: ''; position: absolute; left: 0; right: 0; top: 106px; height: .8px; background: var(--cf-axis); pointer-events: none; }
+.cf-wave-drawing { position: absolute; left: 0; top: 0; display: block; height: 242px; overflow: visible; }
+.cf-wave-trace { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.cf-wave-trace.income { stroke: var(--cf-income); }
+.cf-wave-trace.expense { stroke: var(--cf-expense); }
+.cf-wave-stop.income { stop-color: var(--cf-area-income); }
+.cf-wave-stop.expense { stop-color: var(--cf-area-expense); }
+.cf-wave-dot { stroke: var(--cf-dot-rim); stroke-width: 2; }
+.cf-wave-dot.income { fill: var(--cf-income); }
+.cf-wave-dot.expense { fill: var(--cf-expense); }
+.cf-wave-dot.planned { fill: var(--cf-dot-rim); stroke-width: 1.5; }
+.cf-wave-dot.planned.income { stroke: var(--cf-income); }
+.cf-wave-dot.planned.expense { stroke: var(--cf-expense); }
+.cf-days { position: absolute; left: 0; top: 0; height: 242px; list-style: none; margin: 0; padding: 0; }
+.cf-day { position: absolute; top: 0; height: 242px; text-align: center; font-variant-numeric: tabular-nums; }
+.cf-wave-value { position: absolute; left: 50%; width: max-content; transform: translateX(-50%); font-size: 11.2px; font-weight: 700; line-height: 15px; white-space: nowrap; }
+.cf-day-date { position: absolute; left: 0; right: 0; top: 210px; color: var(--cf-date); font-size: 11.2px; line-height: 15px; }
+.cf-day-date small { display: block; font-size: 9.4px; font-weight: 400; line-height: 12px; color: var(--cf-muted); }
+@media (max-width: 600px) {
+  .cashflow-panel.cf-panel { border-radius: 16px; }
+  .cf-heading { padding: 17px 16px 0; }
+  .cf-heading h2 { font-size: 16.8px; }
+  .cf-series-labels { padding: 8px 16px 0; }
+}
+@media (forced-colors: active) {
+  .cashflow-panel.cf-panel { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
+  .cf-wave-area { display: none; }
+  .cf-wave-trace.income { stroke: CanvasText; }
+  .cf-wave-trace.expense { stroke: CanvasText; stroke-dasharray: 4 3; }
+  .cf-wave-dot { fill: CanvasText; stroke: Canvas; }
+  .cf-wave-plot::after { background: CanvasText; }
+  .cf-income, .cf-expense, .cf-wave-value, .cf-unit, .cf-day-date, .cf-day-date small { color: CanvasText; }
+}
